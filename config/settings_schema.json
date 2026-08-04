@@ -1,0 +1,6 @@
+[
+  {"name":"theme_info","theme_name":"Carokaz","theme_version":"1.0.0","theme_author":"Carokaz","theme_documentation_url":"https://help.shopify.com/fr/manual/online-store/themes","theme_support_url":"https://help.shopify.com/fr"},
+  {"name":"Identité visuelle","settings":[{"type":"image_picker","id":"logo","label":"Logo"},{"type":"range","id":"logo_width","min":80,"max":260,"step":10,"unit":"px","label":"Largeur du logo","default":150}]},
+  {"name":"Couleurs","settings":[{"type":"color","id":"color_text","label":"Texte","default":"#111820"},{"type":"color","id":"color_background","label":"Fond","default":"#ffffff"},{"type":"color","id":"color_accent","label":"Couleur principale","default":"#e6332a"},{"type":"color","id":"color_accent_2","label":"Couleur secondaire","default":"#ffca28"},{"type":"color","id":"color_muted","label":"Texte secondaire","default":"#68717a"}]},
+  {"name":"Mise en page","settings":[{"type":"range","id":"radius","min":0,"max":30,"step":2,"unit":"px","label":"Arrondi des cartes","default":16}]}
+]
