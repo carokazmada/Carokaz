@@ -1,0 +1,15 @@
+<header class="site-header">
+  <div class="page-width header-inner">
+    <a class="logo" href="{{ routes.root_url }}" aria-label="{{ shop.name }}">
+      {% if settings.logo != blank %}{{ settings.logo | image_url: width: settings.logo_width | image_tag: widths: '100, 150, 200, 300', alt: shop.name, width: settings.logo_width }}{% else %}<span class="logo-mark">C</span><span>{{ shop.name | default: 'Carokaz' }}</span>{% endif %}
+    </a>
+    <nav class="nav" aria-label="Navigation principale">{% for link in section.settings.menu.links %}<a href="{{ link.url }}">{{ link.title }}</a>{% endfor %}</nav>
+    <div class="header-actions">
+      {% if shop.customer_accounts_enabled %}<a class="icon-button account" href="{{ routes.account_url }}" aria-label="Mon compte">◉</a>{% endif %}
+      <a class="icon-button" href="{{ routes.cart_url }}" aria-label="Panier">⌑</a>{% if cart.item_count > 0 %}<span class="cart-count">{{ cart.item_count }}</span>{% endif %}
+      <button class="icon-button mobile-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Ouvrir le menu">☰</button>
+    </div>
+  </div>
+  <nav class="mobile-menu" data-mobile-menu hidden>{% for link in section.settings.menu.links %}<a href="{{ link.url }}">{{ link.title }}</a>{% endfor %}</nav>
+</header>
+{% schema %}{"name":"En-tête","settings":[{"type":"link_list","id":"menu","label":"Menu","default":"main-menu"}]}{% endschema %}
