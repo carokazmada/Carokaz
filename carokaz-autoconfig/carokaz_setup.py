@@ -46,7 +46,7 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────
 # CONSTANTES PROJET (issues de la configuration Carokaz Mada)
 # ─────────────────────────────────────────────────────────────
-SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "carokazmada-store.myshopify.com")
+SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "edr2dn-dx.myshopify.com")
 API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2025-07")
 SITE_URL = os.getenv("SITE_URL", "https://carokazmada.com")
 WHATSAPP = "0388424138"
@@ -61,6 +61,11 @@ LOCATION_GID = "gid://shopify/Location/81235247265"
 TAXONOMY_GID = "gid://shopify/TaxonomyCategory/vp-2"
 GOOGLE_PRODUCT_CATEGORY = "5614"          # Cars & Trucks
 GOOGLE_NS = "mm-google-shopping"
+
+# SKU réel du produit déjà en ligne : sert de clé d'idempotence pour T3.
+# Ne pas modifier sans vérifier le SKU de la variante dans l'admin Shopify,
+# sinon T3 recrée un doublon au lieu de retrouver le produit existant.
+GTI_SKU = "CAROKAZ-VW-GOLF7-GTI-2015"
 
 GRAPH_VERSION = os.getenv("META_GRAPH_VERSION", "v21.0")
 WEBHOOK_FIELDS = [
@@ -316,7 +321,7 @@ def task_T3(sp, price, dry):
             "aucun prix ne sera inventé.", "warn")
         return record("T3", "skipped", "Prix manquant — publication volontairement bloquée")
 
-    sku = "CAROKAZ-VOLKSWAGEN-GOLF7-GTI"
+    sku = GTI_SKU
     existing = sp.gql("""query($q:String!){ products(first:1, query:$q){ nodes{ id title } } }""",
                       {"q": f"sku:{sku}"})
     if existing and not existing.get("_dryrun") and existing["products"]["nodes"]:
