@@ -1,0 +1,6 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+carokaz-autoconfig/rapports/
+gsc-service-account.json
