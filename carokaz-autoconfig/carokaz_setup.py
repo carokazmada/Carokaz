@@ -352,12 +352,16 @@ def task_T3(sp, price, dry):
         vid = prod["variants"]["nodes"][0]["id"]
         log(f"Produit créé : {prod['handle']}", "ok")
 
-        sp.gql(M_VARIANT_UPDATE, {
+        d_variant = sp.gql(M_VARIANT_UPDATE, {
             "productId": pid,
-            "variants": [{"id": vid, "price": str(price),
+            "variants": [{"id": vid, "sku": sku, "price": str(price),
                           "inventoryItem": {"tracked": True}}]
         }, mutation=True)
-        log(f"Prix défini : {price} MGA", "ok")
+        errs = Shopify.user_errors(d_variant, "productVariantsBulkUpdate")
+        if errs:
+            log(f"Erreur mise à jour du prix/SKU : {errs}", "err")
+            return record("T3", "error", str(errs), {"id": pid})
+        log(f"Prix défini : {price} MGA (SKU {sku})", "ok")
 
     inputs = [{"publicationId": g} for g in PUBLICATIONS.values()]
     sp.gql(M_PUBLISH, {"id": pid, "input": inputs}, mutation=True)
@@ -377,7 +381,7 @@ def task_T3(sp, price, dry):
 def task_T4(sp, products, dry):
     log("T4 — Publication multi-canaux", "step")
     pub_ids = set(PUBLICATIONS.values())
-    fixed = []
+    fixed, failed = [], []
     for p in products:
         published = {n["publication"]["id"] for n in p["resourcePublications"]["nodes"]
                      if n["isPublished"]}
@@ -386,16 +390,27 @@ def task_T4(sp, products, dry):
             continue
         if dry:
             log(f"[DRY-RUN] {p['title']} → {len(missing)} canal(aux)", "dim")
-        else:
-            sp.gql(M_PUBLISH, {"id": p["id"],
+            fixed.append(p["title"])
+            continue
+        d = sp.gql(M_PUBLISH, {"id": p["id"],
                                "input": [{"publicationId": g} for g in missing]},
                    mutation=True)
-            log(f"{p['title']} → publié sur {len(missing)} canal(aux)", "ok")
+        errs = Shopify.user_errors(d, "publishablePublish")
+        if errs:
+            log(f"{p['title']} → échec publication : {errs}", "err")
+            failed.append(p["title"])
+            continue
+        log(f"{p['title']} → publié sur {len(missing)} canal(aux)", "ok")
         fixed.append(p["title"])
-    if not fixed:
+    if not fixed and not failed:
         log("Tous les produits étaient déjà publiés partout", "ok")
-    return record("T4", "dryrun" if dry else "ok",
-                  f"{len(fixed)} produits corrigés", {"produits": fixed})
+    if failed:
+        log(f"{len(failed)} produit(s) en échec de publication", "warn")
+    detail = f"{len(fixed)} produits corrigés"
+    if failed:
+        detail += f", {len(failed)} en échec"
+    return record("T4", "dryrun" if dry else ("error" if failed else "ok"),
+                  detail, {"produits": fixed, "echecs": failed})
 
 
 # ═════════════════════════════════════════════════════════════
