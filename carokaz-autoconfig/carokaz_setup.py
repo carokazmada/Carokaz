@@ -16,7 +16,9 @@ Tâches couvertes :
   T8  SEO        : ALT manquants + contrôle de couverture sans écrasement
   T9  Collections: métadonnées SEO manquantes, correction idempotente
   T10 Articles   : title_tag/description_tag manquants, correction idempotente
-  T11 Crawl      : contrôle public des balises, canoniques, robots et sitemap
+    T11  Crawl      : contrôle public des balises, canoniques, robots et sitemap
+  T12  Search Console : requêtes, pages et clics réels par pays
+
 
 Usage :
     python carokaz_setup.py --dry-run              # simulation, aucune écriture
@@ -33,8 +35,8 @@ import os
 import sys
 import time
 from html.parser import HTMLParser
-from urllib.parse import urljoin
-from datetime import datetime, timezone
+from urllib.parse import urljoin, quote
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 try:
@@ -822,6 +824,65 @@ def task_T11(cfg, dry):
 
 
 # ═════════════════════════════════════════════════════════════
+# T12 — SEARCH CONSOLE : DONNÉES DE PERFORMANCE RÉELLES
+# ═════════════════════════════════════════════════════════════
+def task_T12(cfg, dry):
+    log("T12 — Search Console : requêtes et pages", "step")
+    sa = cfg.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+    if not sa or not Path(sa).exists():
+        log("GOOGLE_SERVICE_ACCOUNT_JSON absent — collecte Search Console différée", "warn")
+        return record("T12", "skipped", "Credentials Search Console absents")
+    try:
+        from google.oauth2 import service_account
+        from google.auth.transport.requests import AuthorizedSession
+    except ImportError:
+        log("Manque google-auth  ->  pip install -r requirements.txt", "err")
+        return record("T12", "error", "google-auth non installé")
+
+    end = datetime.now(timezone.utc).date()
+    start = end - timedelta(days=28)
+    site = cfg.get("GSC_SITE_URL", "sc-domain:" + SHOP_DOMAIN.replace(".myshopify.com", ".com"))
+    body = {
+        "startDate": start.isoformat(),
+        "endDate": end.isoformat(),
+        "dimensions": ["query", "page", "country"],
+        "rowLimit": 25000,
+        "dataState": "final",
+    }
+    if dry:
+        log(f"[DRY-RUN] collecte Search Console {start} → {end}", "dim")
+        return record("T12", "dryrun", "Collecte Search Console simulée", {"start": start.isoformat(), "end": end.isoformat()})
+
+    creds = service_account.Credentials.from_service_account_file(
+        sa, scopes=["https://www.googleapis.com/auth/webmasters.readonly"])
+    sess = AuthorizedSession(creds)
+    endpoint = ("https://www.googleapis.com/webmasters/v3/sites/" +
+                quote(site, safe="") + "/searchAnalytics/query")
+    response = sess.post(endpoint, json=body, timeout=60)
+    if response.status_code != 200:
+        log(f"Search Console HTTP {response.status_code}: {response.text[:240]}", "err")
+        return record("T12", "error", f"HTTP {response.status_code}", {"response": response.text[:1000]})
+
+    rows = response.json().get("rows", [])
+    md_rows = [r for r in rows if (r.get("keys") or ["", "", ""])[-1].upper() == "MD"]
+    top_queries = {}
+    top_pages = {}
+    for row in md_rows:
+        keys = row.get("keys") or []
+        query = keys[0] if len(keys) > 0 else ""
+        page = keys[1] if len(keys) > 1 else ""
+        top_queries[query] = top_queries.get(query, 0) + float(row.get("clicks", 0))
+        top_pages[page] = top_pages.get(page, 0) + float(row.get("clicks", 0))
+    top_queries = sorted(top_queries.items(), key=lambda x: x[1], reverse=True)[:50]
+    top_pages = sorted(top_pages.items(), key=lambda x: x[1], reverse=True)[:50]
+    log(f"Search Console : {len(md_rows)} ligne(s) Madagascar, {sum(x[1] for x in top_queries):.0f} clic(s) agrégé(s)", "ok")
+    return record("T12", "ok", f"{len(md_rows)} lignes MD sur 28 jours", {
+        "start": start.isoformat(), "end": end.isoformat(),
+        "rows_md": len(md_rows), "top_queries": top_queries, "top_pages": top_pages,
+    })
+
+
+# ═════════════════════════════════════════════════════════════
 # RAPPORT
 # ═════════════════════════════════════════════════════════════
 def write_report():
@@ -930,6 +991,13 @@ def main():
             task_T11(cfg, dry)
         except Exception as e:
             log(f"T11 : {e}", "err"); record("T11", "error", str(e))
+        print()
+
+    if want("T12"):
+        try:
+            task_T12(cfg, dry)
+        except Exception as e:
+            log(f"T12 : {e}", "err"); record("T12", "error", str(e))
         print()
 
     write_report()

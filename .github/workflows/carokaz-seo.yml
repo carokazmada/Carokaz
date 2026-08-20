@@ -12,6 +12,7 @@ env:
   SHOPIFY_SHOP: carokazmada-store.myshopify.com
   SHOPIFY_API_VERSION: "2025-07"
   SITE_URL: https://carokazmada.com
+  GSC_SITE_URL: sc-domain:carokazmada.com
   NO_COLOR: "1"
   SEO_AUDIT_PATHS: "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/blogs/actualites/fiara-amidy-madagascar-guide-achat-antananarivo,/pages/fiara-amidy-madagascar,/pages/a-propos,/pages/contact,/pages/faq"
 
@@ -44,6 +45,51 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: carokaz-public-seo-rapport-${{ github.run_number }}
+          path: carokaz-autoconfig/rapports/
+          if-no-files-found: warn
+          retention-days: 30
+
+  search-console-report:
+    name: Rapport Search Console Madagascar
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: carokaz-autoconfig
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: carokaz-autoconfig/requirements.txt
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Préparer les identifiants Search Console
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+            mkdir -p rapports
+            printf '# Carokaz Mada — Diagnostic Search Console\\n\\nStatut : DIFFÉRÉ\\n\\nLe secret `GOOGLE_SERVICE_ACCOUNT_JSON` n’est pas configuré ; le crawl public reste actif.\\n' > "rapports/rapport-search-console-${GITHUB_RUN_ID}.md"
+          else
+            printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-service-account.json"
+          fi
+
+      - name: Collecter les performances Search Console
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/google-service-account.json
+        run: python carokaz_setup.py --only T12
+
+      - name: Publier le rapport Search Console
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carokaz-search-console-rapport-${{ github.run_number }}
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
           retention-days: 30
