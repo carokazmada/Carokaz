@@ -24,6 +24,7 @@ python carokaz_setup.py --all
 python carokaz_setup.py --only T1              # webhook Messenger seul
 python carokaz_setup.py --only T2              # audit lecture seule
 python carokaz_setup.py --only T3 --gti-price 90000000
+python carokaz_setup.py --only T8 --dry-run     # contrôle SEO sans écriture
 ```
 
 ## Tâches
@@ -37,5 +38,6 @@ python carokaz_setup.py --only T3 --gti-price 90000000
 | T5 | Shopify : ajout des metafields Google manquants (`condition=used`, `google_product_category`) |
 | T6 | Google Search Console : soumission du sitemap |
 | T7 | Génération du rapport JSON + Markdown dans `./rapports` |
+| T8 | Contrôle SEO idempotent : complète les ALT manquants des médias et signale les produits sans métadonnées SEO, sans écraser les données existantes |
 
-Le rapport de chaque exécution est écrit dans `./rapports/rapport-<horodatage>.{json,md}`.
+Le rapport de chaque exécution est écrit dans `./rapports/rapport-<horodatage>.{json,md}`. Pour une exécution récurrente, utiliser le workflow GitHub Actions fourni dans `.github/workflows/carokaz-seo.yml` et renseigner le secret `SHOPIFY_ADMIN_TOKEN` avec les droits `read_products` et `write_products`.

@@ -13,6 +13,7 @@ Tâches couvertes :
   T5  Shopify    : metafields Google (condition=used) manquants
   T6  Google     : soumission du sitemap à Search Console
   T7  Rapport    : JSON + Markdown
+  T8  SEO        : ALT manquants + contrôle de couverture sans écrasement
 
 Usage :
     python carokaz_setup.py --dry-run              # simulation, aucune écriture
@@ -167,6 +168,14 @@ M_METAFIELDS = """
 mutation setMf($metafields: [MetafieldsSetInput!]!) {
   metafieldsSet(metafields: $metafields) {
     userErrors { field message }
+  }
+}
+"""
+
+M_MEDIA_ALT_UPDATE = """
+mutation mediaAltUpdate($productId: ID!, $media: [UpdateMediaInput!]!) {
+  productUpdateMedia(productId: $productId, media: $media) {
+    mediaUserErrors { field message }
   }
 }
 """
@@ -489,6 +498,75 @@ def task_T6(cfg, dry):
 
 
 # ═════════════════════════════════════════════════════════════
+# T8 — HYGIÈNE SEO AUTOMATIQUE (idempotente)
+# ═════════════════════════════════════════════════════════════
+def seo_alt_for_product(title, index):
+    clean = " ".join((title or "Véhicule d'occasion").split())
+    return f"{clean} d'occasion à Madagascar — photo véhicule {index}"
+
+
+def task_T8(sp, products, dry):
+    log("T8 — Hygiène SEO automatique (ALT + couverture)", "step")
+    missing_alt = []
+    missing_seo = []
+    updates = {}
+    for p in products:
+        seo = p.get("seo") or {}
+        if not (seo.get("title") or "").strip():
+            missing_seo.append(p["title"])
+        if not (seo.get("description") or "").strip():
+            missing_seo.append(p["title"])
+        media_updates = []
+        for i, media in enumerate((p.get("media") or {}).get("nodes", []), 1):
+            if not (media.get("alt") or "").strip():
+                media_updates.append({
+                    "id": media["id"],
+                    "alt": seo_alt_for_product(p["title"], i),
+                })
+        if media_updates:
+            missing_alt.append(p["title"])
+            updates[p["id"]] = {"title": p["title"], "media": media_updates}
+
+    total_media = sum(len(v["media"]) for v in updates.values())
+    if not updates:
+        log("Aucun ALT manquant ; les métadonnées SEO existantes sont conservées", "ok")
+        return record("T8", "ok", "Catalogue conforme", {
+            "produits_sans_seo": len(set(missing_seo)),
+            "produits_avec_alt_manquant": 0,
+            "medias_corriges": 0,
+        })
+
+    log(f"{total_media} ALT manquant(s) sur {len(updates)} produit(s)", "warn")
+    if dry:
+        log("[DRY-RUN] aucune écriture envoyée", "dim")
+        return record("T8", "dryrun", f"{total_media} ALT simulé(s)", {
+            "produits": list(missing_alt),
+            "medias": total_media,
+            "produits_sans_seo": len(set(missing_seo)),
+        })
+
+    fixed, failed = [], []
+    for pid, payload in updates.items():
+        d = sp.gql(M_MEDIA_ALT_UPDATE, {
+            "productId": pid,
+            "media": payload["media"],
+        }, mutation=True)
+        errs = ((d or {}).get("productUpdateMedia") or {}).get("mediaUserErrors") or []
+        if errs:
+            failed.append({"produit": payload["title"], "erreurs": errs})
+            log(f"{payload['title']} → ALT : échec {errs}", "err")
+        else:
+            fixed.append(payload["title"])
+            log(f"{payload['title']} → {len(payload['media'])} ALT corrigé(s)", "ok")
+
+    status = "error" if failed else "ok"
+    return record("T8", status,
+                  f"{sum(len(updates[pid]['media']) for pid in updates if updates[pid]['title'] in fixed)} ALT corrigé(s)" + (f", {len(failed)} échec(s)" if failed else ""),
+                  {"produits_corriges": fixed, "echecs": failed,
+                   "produits_sans_seo": len(set(missing_seo))})
+
+
+# ═════════════════════════════════════════════════════════════
 # RAPPORT
 # ═════════════════════════════════════════════════════════════
 def write_report():
@@ -539,7 +617,7 @@ def main():
     if want("T1"):
         task_T1(cfg, dry); print()
 
-    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5"))
+    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5", "T8"))
     if needs_shopify and not sp:
         log("SHOPIFY_ADMIN_TOKEN absent — tâches Shopify ignorées", "warn")
     elif needs_shopify:
@@ -565,6 +643,12 @@ def main():
                 task_T5(sp, products, dry)
             except Exception as e:
                 log(f"T5 : {e}", "err"); record("T5", "error", str(e))
+            print()
+        if want("T8") and products:
+            try:
+                task_T8(sp, products, dry)
+            except Exception as e:
+                log(f"T8 : {e}", "err"); record("T8", "error", str(e))
             print()
 
     if want("T6"):
