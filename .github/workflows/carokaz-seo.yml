@@ -72,6 +72,8 @@ jobs:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
         run: |
           if [ -z "$SHOPIFY_ADMIN_TOKEN" ]; then
+            mkdir -p rapports
+            printf '# Carokaz Mada — Diagnostic Shopify\n\nStatut : BLOQUÉ\n\nLe secret `SHOPIFY_ADMIN_TOKEN` n’est pas configuré dans GitHub Actions.\n' > "rapports/rapport-preflight-${GITHUB_RUN_ID}.md"
             echo "::error::Le secret SHOPIFY_ADMIN_TOKEN n'est pas configuré dans GitHub."
             exit 1
           fi
