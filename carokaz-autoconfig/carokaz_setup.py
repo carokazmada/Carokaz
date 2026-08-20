@@ -740,6 +740,9 @@ class SEOHTMLParser(HTMLParser):
         self.images = 0
         self.images_missing_alt = 0
         self.jsonld = 0
+        self.jsonld_types = []
+        self._in_jsonld = False
+        self._jsonld_chunks = []
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -750,17 +753,35 @@ class SEOHTMLParser(HTMLParser):
             if not (attrs.get("alt") or "").strip(): self.images_missing_alt += 1
         if tag == "meta" and (attrs.get("name") or "").lower() == "description": self.description = attrs.get("content") or ""
         if tag == "link" and "canonical" in (attrs.get("rel") or []): self.canonical = attrs.get("href") or ""
-        if tag == "script" and (attrs.get("type") or "").lower() == "application/ld+json": self.jsonld += 1
+        if tag == "script" and (attrs.get("type") or "").lower() == "application/ld+json":
+            self.jsonld += 1
+            self._in_jsonld = True
+            self._jsonld_chunks = []
 
     def handle_endtag(self, tag):
         if tag == "title": self._in_title = False
         if tag == "h1":
             self._in_h1 = False
             self.h1.append(" ".join(self._current_h1).strip())
+        if tag == "script" and self._in_jsonld:
+            try:
+                obj = json.loads("".join(self._jsonld_chunks))
+                values = obj if isinstance(obj, list) else [obj]
+                for value in values:
+                    if isinstance(value, dict) and value.get("@type"):
+                        types = value["@type"] if isinstance(value["@type"], list) else [value["@type"]]
+                        self.jsonld_types.extend(str(x) for x in types)
+                    if isinstance(value, dict) and isinstance(value.get("@graph"), list):
+                        self.jsonld_types.extend(str(x.get("@type")) for x in value["@graph"] if isinstance(x, dict) and x.get("@type"))
+            except Exception:
+                pass
+            self._in_jsonld = False
+            self._jsonld_chunks = []
 
     def handle_data(self, data):
         if self._in_title: self.title.append(data)
         if self._in_h1: self._current_h1.append(data)
+        if self._in_jsonld: self._jsonld_chunks.append(data)
 
 
 def task_T11(cfg, dry):
@@ -777,7 +798,7 @@ def task_T11(cfg, dry):
             parser = SEOHTMLParser()
             if "html" in response.headers.get("content-type", ""):
                 parser.feed(response.text)
-            row = {"path": path, "status": response.status_code, "final_url": response.url, "title": "".join(parser.title).strip(), "description": parser.description, "canonical": parser.canonical, "h1": parser.h1, "images": parser.images, "images_missing_alt": parser.images_missing_alt, "jsonld": parser.jsonld}
+            row = {"path": path, "status": response.status_code, "final_url": response.url, "title": "".join(parser.title).strip(), "description": parser.description, "canonical": parser.canonical, "h1": parser.h1, "images": parser.images, "images_missing_alt": parser.images_missing_alt, "jsonld": parser.jsonld, "jsonld_types": sorted(set(parser.jsonld_types))}
             rows.append(row)
             if response.status_code != 200: issues.append({"path": path, "issue": f"HTTP {response.status_code}"})
             if "html" in response.headers.get("content-type", ""):
