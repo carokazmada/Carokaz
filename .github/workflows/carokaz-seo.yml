@@ -115,18 +115,22 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Vérifier le secret Shopify
+        id: shopify_preflight
         env:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
         run: |
           if [ -z "$SHOPIFY_ADMIN_TOKEN" ]; then
             mkdir -p rapports
-            printf '# Carokaz Mada — Diagnostic Shopify\n\nStatut : BLOQUÉ\n\nLe secret `SHOPIFY_ADMIN_TOKEN` n’est pas configuré dans GitHub Actions.\n' > "rapports/rapport-preflight-${GITHUB_RUN_ID}.md"
-            echo "::error::Le secret SHOPIFY_ADMIN_TOKEN n'est pas configuré dans GitHub."
-            exit 1
+            printf '# Carokaz Mada — Diagnostic Shopify\n\nStatut : DIFFÉRÉ\n\nLe secret `SHOPIFY_ADMIN_TOKEN` n’est pas configuré dans GitHub Actions ; l’hygiène Shopify sera reprise automatiquement dès son ajout.\n' > "rapports/rapport-preflight-${GITHUB_RUN_ID}.md"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Le secret SHOPIFY_ADMIN_TOKEN n'est pas configuré ; le job Shopify est différé."
+            exit 0
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
           echo "Secret Shopify détecté (valeur masquée)."
 
       - name: Exécuter l’hygiène SEO Shopify
+        if: steps.shopify_preflight.outputs.configured == 'true'
         env:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
         run: python carokaz_setup.py --only T2,T5,T8,T9,T10
