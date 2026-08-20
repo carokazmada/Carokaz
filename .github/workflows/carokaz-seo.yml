@@ -34,6 +34,16 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
+      - name: Vérifier le secret Shopify
+        env:
+          SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$SHOPIFY_ADMIN_TOKEN" ]; then
+            echo "::error::Le secret SHOPIFY_ADMIN_TOKEN n'est pas configuré dans GitHub."
+            exit 1
+          fi
+          echo "Secret Shopify détecté (valeur masquée)."
+
       - name: Exécuter l’hygiène SEO Shopify
         env:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
