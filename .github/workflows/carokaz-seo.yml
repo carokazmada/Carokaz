@@ -47,7 +47,7 @@ jobs:
       - name: Exécuter l’hygiène SEO Shopify
         env:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
-        run: python carokaz_setup.py --only T2,T5,T8
+        run: python carokaz_setup.py --only T2,T5,T8,T9,T10,T11
 
       - name: Publier le rapport
         if: always()

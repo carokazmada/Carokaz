@@ -14,6 +14,9 @@ Tâches couvertes :
   T6  Google     : soumission du sitemap à Search Console
   T7  Rapport    : JSON + Markdown
   T8  SEO        : ALT manquants + contrôle de couverture sans écrasement
+  T9  Collections: métadonnées SEO manquantes, correction idempotente
+  T10 Articles   : title_tag/description_tag manquants, correction idempotente
+  T11 Crawl      : contrôle public des balises, canoniques, robots et sitemap
 
 Usage :
     python carokaz_setup.py --dry-run              # simulation, aucune écriture
@@ -29,6 +32,8 @@ import json
 import os
 import sys
 import time
+from html.parser import HTMLParser
+from urllib.parse import urljoin
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -176,6 +181,45 @@ M_MEDIA_ALT_UPDATE = """
 mutation mediaAltUpdate($productId: ID!, $media: [UpdateMediaInput!]!) {
   productUpdateMedia(productId: $productId, media: $media) {
     mediaUserErrors { field message }
+  }
+}
+"""
+
+Q_COLLECTIONS = """
+query {
+  collections(first: 100) {
+    nodes {
+      id title handle
+      seo { title description }
+      productsCount { count }
+    }
+  }
+}
+"""
+
+Q_BLOG_ARTICLES = """
+query {
+  blogs(first: 20) {
+    nodes {
+      id handle title
+      articles(first: 100) {
+        nodes {
+          id title handle summary publishedAt
+          metafields(first: 10, namespace: "global") {
+            nodes { id namespace key value }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+M_COLLECTION_UPDATE = """
+mutation collectionSeoUpdate($input: CollectionInput!) {
+  collectionUpdate(input: $input) {
+    collection { id title seo { title description } }
+    userErrors { field message }
   }
 }
 """
@@ -567,6 +611,196 @@ def task_T8(sp, products, dry):
 
 
 # ═════════════════════════════════════════════════════════════
+# T9 — COLLECTIONS : SEO MANQUANT UNIQUEMENT
+# ═════════════════════════════════════════════════════════════
+COLLECTION_SEO_TARGETS = {
+    "frontpage": (
+        "Voitures d'occasion à vendre à Madagascar | Carokaz Mada Antananarivo",
+        "Carokaz Mada, vente de voitures d'occasion à Antananarivo : SUV, 4x4, pick-up et citadines vérifiés. Livraison dans toute Madagascar. WhatsApp 038 84 241 38.",
+    ),
+    "vehicules-disponibles": (
+        "Voitures d'occasion disponibles à Madagascar | Carokaz Mada",
+        "Véhicules d'occasion disponibles à Antananarivo : SUV, 4x4, pick-up et citadines sélectionnés par Carokaz Mada, avec livraison à Madagascar.",
+    ),
+    "fiara-vaovao": (
+        "Fiara occasion et nouveaux arrivages à Madagascar | Carokaz Mada",
+        "Fiara occasion et nouveaux arrivages chez Carokaz Mada à Antananarivo : voitures, SUV, 4x4 et pick-up disponibles à Madagascar.",
+    ),
+    "citadines": (
+        "Citadines d'occasion à Madagascar | Carokaz Mada",
+        "Citadines d'occasion économiques et pratiques à Antananarivo, Madagascar. Consultez les modèles disponibles chez Carokaz Mada.",
+    ),
+    "suv": (
+        "SUV d'occasion à Madagascar | Carokaz Mada",
+        "SUV d'occasion disponibles à Antananarivo : modèles diesel, automatiques et familiaux sélectionnés pour les routes de Madagascar.",
+    ),
+    "4x4": (
+        "4x4 d'occasion à Madagascar | Carokaz Mada",
+        "4x4 d'occasion à Antananarivo : Toyota Land Cruiser, SUV tout-terrain et véhicules diesel disponibles chez Carokaz Mada.",
+    ),
+    "pick-up": (
+        "Pick-up d'occasion à Madagascar | Carokaz Mada",
+        "Pick-up d'occasion à Antananarivo : Ford Ranger, Toyota Hilux et autres modèles 4x4 disponibles chez Carokaz Mada.",
+    ),
+}
+
+
+def task_T9(sp, dry):
+    log("T9 — SEO des collections", "step")
+    d = sp.gql(Q_COLLECTIONS)
+    collections = d["collections"]["nodes"]
+    updates = []
+    for c in collections:
+        target = COLLECTION_SEO_TARGETS.get(c["handle"])
+        if not target:
+            continue
+        seo = c.get("seo") or {}
+        missing = {}
+        if not (seo.get("title") or "").strip():
+            missing["title"] = target[0]
+        if not (seo.get("description") or "").strip():
+            missing["description"] = target[1]
+        if missing:
+            updates.append({"id": c["id"], "title": c["title"], "seo": missing})
+
+    if not updates:
+        log("Toutes les collections ciblées ont déjà un SEO personnalisé", "ok")
+        return record("T9", "ok", f"{len(collections)} collections contrôlées", {"corrections": 0})
+    if dry:
+        log(f"[DRY-RUN] {len(updates)} collection(s) à compléter", "dim")
+        return record("T9", "dryrun", f"{len(updates)} collection(s) simulée(s)", {"updates": updates})
+
+    fixed, failed = [], []
+    for item in updates:
+        result = sp.gql(M_COLLECTION_UPDATE, {"input": {"id": item["id"], "seo": item["seo"]}}, mutation=True)
+        errors = Shopify.user_errors(result, "collectionUpdate")
+        if errors:
+            failed.append({"collection": item["title"], "errors": errors})
+            log(f"{item['title']} → SEO : échec {errors}", "err")
+        else:
+            fixed.append(item["title"])
+            log(f"{item['title']} → SEO complété", "ok")
+    return record("T9", "error" if failed else "ok", f"{len(fixed)} collection(s) corrigée(s)" + (f", {len(failed)} échec(s)" if failed else ""), {"corrigees": fixed, "echecs": failed})
+
+
+# ═════════════════════════════════════════════════════════════
+# T10 — ARTICLES : TITLE_TAG / DESCRIPTION_TAG MANQUANTS
+# ═════════════════════════════════════════════════════════════
+def plain_text(value):
+    return " ".join((value or "").replace("<p>", " ").replace("</p>", " ").split())
+
+
+def task_T10(sp, dry):
+    log("T10 — SEO des articles", "step")
+    d = sp.gql(Q_BLOG_ARTICLES)
+    articles = []
+    for blog in d["blogs"]["nodes"]:
+        articles.extend(blog["articles"]["nodes"])
+    batch = []
+    for article in articles:
+        fields = {m["key"]: m for m in (article.get("metafields") or {}).get("nodes", [])}
+        summary = plain_text(article.get("summary"))
+        if not (fields.get("title_tag") or {}).get("value"):
+            batch.append({"ownerId": article["id"], "namespace": "global", "key": "title_tag", "type": "single_line_text_field", "value": article["title"][:70]})
+        if not (fields.get("description_tag") or {}).get("value"):
+            desc = summary or f"Guide Carokaz Mada sur {article['title']} à Madagascar."
+            batch.append({"ownerId": article["id"], "namespace": "global", "key": "description_tag", "type": "single_line_text_field", "value": desc[:320]})
+
+    if not batch:
+        log(f"{len(articles)} article(s) contrôlé(s), tous ont title_tag et description_tag", "ok")
+        return record("T10", "ok", f"{len(articles)} article(s) conformes", {"corrections": 0})
+    if dry:
+        log(f"[DRY-RUN] {len(batch)} métadonnée(s) article simulée(s)", "dim")
+        return record("T10", "dryrun", f"{len(batch)} métadonnée(s) simulée(s)", {"updates": batch})
+
+    errors = []
+    for i in range(0, len(batch), 25):
+        result = sp.gql(M_METAFIELDS, {"metafields": batch[i:i + 25]}, mutation=True)
+        errors.extend(Shopify.user_errors(result, "metafieldsSet"))
+    if errors:
+        log(f"SEO articles : {len(errors)} erreur(s)", "err")
+        return record("T10", "error", f"{len(errors)} erreur(s)", {"errors": errors})
+    log(f"{len(batch)} métadonnée(s) article corrigée(s)", "ok")
+    return record("T10", "ok", f"{len(batch)} métadonnée(s) corrigée(s)", {"corrections": len(batch)})
+
+
+# ═════════════════════════════════════════════════════════════
+# T11 — CRAWL PUBLIC : INDEXABILITÉ ET BALISES
+# ═════════════════════════════════════════════════════════════
+class SEOHTMLParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.title = []
+        self.h1 = []
+        self._in_title = False
+        self._in_h1 = False
+        self._current_h1 = []
+        self.description = ""
+        self.canonical = ""
+        self.images = 0
+        self.images_missing_alt = 0
+        self.jsonld = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "title": self._in_title = True
+        if tag == "h1": self._in_h1 = True; self._current_h1 = []
+        if tag == "img":
+            self.images += 1
+            if not (attrs.get("alt") or "").strip(): self.images_missing_alt += 1
+        if tag == "meta" and (attrs.get("name") or "").lower() == "description": self.description = attrs.get("content") or ""
+        if tag == "link" and "canonical" in (attrs.get("rel") or []): self.canonical = attrs.get("href") or ""
+        if tag == "script" and (attrs.get("type") or "").lower() == "application/ld+json": self.jsonld += 1
+
+    def handle_endtag(self, tag):
+        if tag == "title": self._in_title = False
+        if tag == "h1":
+            self._in_h1 = False
+            self.h1.append(" ".join(self._current_h1).strip())
+
+    def handle_data(self, data):
+        if self._in_title: self.title.append(data)
+        if self._in_h1: self._current_h1.append(data)
+
+
+def task_T11(cfg, dry):
+    log("T11 — Crawl public SEO", "step")
+    paths = [x.strip() for x in cfg.get("SEO_AUDIT_PATHS", "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/pages/a-propos,/pages/contact,/pages/faq").split(",") if x.strip()]
+    base = cfg.get("SITE_URL", SITE_URL).rstrip("/")
+    session = requests.Session()
+    session.headers.update({"User-Agent": "CarokazSEOAudit/1.0"})
+    rows, issues = [], []
+    for path in paths:
+        url = urljoin(base + "/", path.lstrip("/"))
+        try:
+            response = session.get(url, timeout=30, allow_redirects=True)
+            parser = SEOHTMLParser()
+            if "html" in response.headers.get("content-type", ""):
+                parser.feed(response.text)
+            row = {"path": path, "status": response.status_code, "final_url": response.url, "title": "".join(parser.title).strip(), "description": parser.description, "canonical": parser.canonical, "h1": parser.h1, "images": parser.images, "images_missing_alt": parser.images_missing_alt, "jsonld": parser.jsonld}
+            rows.append(row)
+            if response.status_code != 200: issues.append({"path": path, "issue": f"HTTP {response.status_code}"})
+            if "html" in response.headers.get("content-type", ""):
+                if not row["title"]: issues.append({"path": path, "issue": "title manquant"})
+                if not row["description"]: issues.append({"path": path, "issue": "meta-description manquante"})
+                if len(row["h1"]) != 1: issues.append({"path": path, "issue": f"H1={len(row['h1'])}"})
+                if row["canonical"] and row["canonical"] != response.url: issues.append({"path": path, "issue": "canonical différent de l’URL finale"})
+                if row["images_missing_alt"]: issues.append({"path": path, "issue": f"{row['images_missing_alt']} ALT manquant(s)"})
+        except Exception as exc:
+            issues.append({"path": path, "issue": repr(exc)})
+    robots = session.get(urljoin(base + "/", "robots.txt"), timeout=30)
+    sitemap = session.get(urljoin(base + "/", "sitemap.xml"), timeout=30)
+    sitemap_count = sitemap.text.count("<loc>") if sitemap.status_code == 200 else 0
+    payload = {"pages": rows, "issues": issues, "robots_status": robots.status_code, "sitemap_status": sitemap.status_code, "sitemap_loc_count": sitemap_count}
+    if dry:
+        log(f"[DRY-RUN] {len(rows)} page(s) contrôlée(s), {len(issues)} anomalie(s)", "dim")
+        return record("T11", "dryrun", f"{len(rows)} pages, {len(issues)} anomalie(s)", payload)
+    status = "error" if any(x["issue"].startswith("HTTP") for x in issues) else ("warn" if issues else "ok")
+    log(f"{len(rows)} page(s) contrôlée(s), {len(issues)} anomalie(s)", "warn" if issues else "ok")
+    return record("T11", status, f"{len(rows)} pages, {len(issues)} anomalie(s)", payload)
+
+
+# ═════════════════════════════════════════════════════════════
 # RAPPORT
 # ═════════════════════════════════════════════════════════════
 def write_report():
@@ -617,7 +851,7 @@ def main():
     if want("T1"):
         task_T1(cfg, dry); print()
 
-    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5", "T8"))
+    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5", "T8", "T9", "T10"))
     if needs_shopify and not sp:
         log("SHOPIFY_ADMIN_TOKEN absent — tâches Shopify ignorées", "warn")
     elif needs_shopify:
@@ -650,12 +884,32 @@ def main():
             except Exception as e:
                 log(f"T8 : {e}", "err"); record("T8", "error", str(e))
             print()
+        if want("T9"):
+            try:
+                task_T9(sp, dry)
+            except Exception as e:
+                log(f"T9 : {e}", "err"); record("T9", "error", str(e))
+            print()
+        if want("T10"):
+            try:
+                task_T10(sp, dry)
+            except Exception as e:
+                log(f"T10 : {e}", "err"); record("T10", "error", str(e))
+            print()
 
     if want("T6"):
         try:
             task_T6(cfg, dry)
         except Exception as e:
             log(f"T6 : {e}", "err"); record("T6", "error", str(e))
+        print()
+
+    if want("T11"):
+        try:
+            task_T11(cfg, dry)
+        except Exception as e:
+            log(f"T11 : {e}", "err"); record("T11", "error", str(e))
+        print()
 
     write_report()
 
