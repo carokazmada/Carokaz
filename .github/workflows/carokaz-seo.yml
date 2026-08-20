@@ -15,7 +15,40 @@ env:
   NO_COLOR: "1"
 
 jobs:
-  seo-catalogue:
+  public-seo-crawl:
+    name: Crawl public et rapport d’indexabilité
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: carokaz-autoconfig
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: carokaz-autoconfig/requirements.txt
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Exécuter le crawl public
+        run: python carokaz_setup.py --only T11 --dry-run
+
+      - name: Publier le rapport public
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: carokaz-public-seo-rapport-${{ github.run_number }}
+          path: carokaz-autoconfig/rapports/
+          if-no-files-found: warn
+          retention-days: 30
+
+  shopify-seo:
+    name: Audit et corrections Shopify
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -47,13 +80,13 @@ jobs:
       - name: Exécuter l’hygiène SEO Shopify
         env:
           SHOPIFY_ADMIN_TOKEN: ${{ secrets.SHOPIFY_ADMIN_TOKEN }}
-        run: python carokaz_setup.py --only T2,T5,T8,T9,T10,T11
+        run: python carokaz_setup.py --only T2,T5,T8,T9,T10
 
-      - name: Publier le rapport
+      - name: Publier le rapport Shopify
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: carokaz-seo-rapport-${{ github.run_number }}
+          name: carokaz-shopify-seo-rapport-${{ github.run_number }}
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
           retention-days: 30
