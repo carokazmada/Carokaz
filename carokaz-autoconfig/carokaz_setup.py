@@ -765,7 +765,7 @@ class SEOHTMLParser(HTMLParser):
 
 def task_T11(cfg, dry):
     log("T11 — Crawl public SEO", "step")
-    paths = [x.strip() for x in cfg.get("SEO_AUDIT_PATHS", "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/pages/a-propos,/pages/contact,/pages/faq").split(",") if x.strip()]
+    paths = [x.strip() for x in cfg.get("SEO_AUDIT_PATHS", "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/blogs/actualites/fiara-amidy-madagascar-guide-achat-antananarivo,/pages/fiara-amidy-madagascar,/pages/a-propos,/pages/contact,/pages/faq").split(",") if x.strip()]
     base = cfg.get("SITE_URL", SITE_URL).rstrip("/")
     session = requests.Session()
     session.headers.update({"User-Agent": "CarokazSEOAudit/1.0"})

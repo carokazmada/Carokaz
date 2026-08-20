@@ -13,6 +13,7 @@ env:
   SHOPIFY_API_VERSION: "2025-07"
   SITE_URL: https://carokazmada.com
   NO_COLOR: "1"
+  SEO_AUDIT_PATHS: "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/blogs/actualites/fiara-amidy-madagascar-guide-achat-antananarivo,/pages/fiara-amidy-madagascar,/pages/a-propos,/pages/contact,/pages/faq"
 
 jobs:
   public-seo-crawl:
