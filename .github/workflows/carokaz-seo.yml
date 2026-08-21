@@ -2,6 +2,12 @@ name: Carokaz Mada — SEO catalogue
 
 on:
   workflow_dispatch:
+    inputs:
+      apply_fixes:
+        description: "Appliquer les corrections Shopify mutatives"
+        required: true
+        default: false
+        type: boolean
   schedule:
     - cron: "17 3 * * 1"
 
@@ -53,6 +59,8 @@ jobs:
 
   shopify-seo:
     name: Audit et corrections Shopify
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_fixes == true }}
+    environment: shopify-production
     runs-on: ubuntu-latest
     defaults:
       run:
