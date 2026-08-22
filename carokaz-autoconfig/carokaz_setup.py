@@ -528,6 +528,7 @@ def task_T6(cfg, dry):
     from urllib.parse import quote
     site = cfg.get("GSC_SITE_URL", SITE_URL.rstrip("/") + "/")
     done = []
+    failed = []
     for sm in SITEMAPS:
         feed = f"{SITE_URL.rstrip('/')}/{sm}"
         url = (f"https://www.googleapis.com/webmasters/v3/sites/"
@@ -539,8 +540,12 @@ def task_T6(cfg, dry):
             log(f"Sitemap soumis : {feed}", "ok"); done.append(feed)
         else:
             log(f"Échec {r.status_code} sur {feed} : {r.text[:180]}", "err")
-    return record("T6", "dryrun" if dry else "ok",
-                  f"{len(done)} sitemap(s)", {"sitemaps": done})
+            failed.append({"sitemap": feed, "status": r.status_code, "response": r.text[:300]})
+    status = "dryrun" if dry else ("error" if failed else "ok")
+    detail = f"{len(done)} sitemap(s)"
+    if failed:
+        detail += f", {len(failed)} échec(s)"
+    return record("T6", status, detail, {"sitemaps": done, "echecs": failed})
 
 
 # ═════════════════════════════════════════════════════════════
@@ -807,13 +812,20 @@ def task_T11(cfg, dry):
                 if not row["title"]: issues.append({"path": path, "issue": "title manquant"})
                 if not row["description"]: issues.append({"path": path, "issue": "meta-description manquante"})
                 if len(row["h1"]) != 1: issues.append({"path": path, "issue": f"H1={len(row['h1'])}"})
-                if row["canonical"] and row["canonical"] != response.url: issues.append({"path": path, "issue": "canonical différent de l’URL finale"})
+                if not row["canonical"]: issues.append({"path": path, "issue": "canonical manquante"})
+                elif row["canonical"] != response.url: issues.append({"path": path, "issue": "canonical différent de l’URL finale"})
                 if row["images_missing_alt"]: issues.append({"path": path, "issue": f"{row['images_missing_alt']} ALT manquant(s)"})
         except Exception as exc:
             issues.append({"path": path, "issue": repr(exc)})
     robots = session.get(urljoin(base + "/", "robots.txt"), timeout=30)
     sitemap = session.get(urljoin(base + "/", "sitemap.xml"), timeout=30)
     sitemap_count = sitemap.text.count("<loc>") if sitemap.status_code == 200 else 0
+    if robots.status_code != 200:
+        issues.append({"path": "/robots.txt", "issue": f"HTTP {robots.status_code}"})
+    if sitemap.status_code != 200:
+        issues.append({"path": "/sitemap.xml", "issue": f"HTTP {sitemap.status_code}"})
+    elif sitemap_count == 0:
+        issues.append({"path": "/sitemap.xml", "issue": "aucune URL déclarée"})
     payload = {"pages": rows, "issues": issues, "robots_status": robots.status_code, "sitemap_status": sitemap.status_code, "sitemap_loc_count": sitemap_count}
     if dry:
         log(f"[DRY-RUN] {len(rows)} page(s) contrôlée(s), {len(issues)} anomalie(s)", "dim")
