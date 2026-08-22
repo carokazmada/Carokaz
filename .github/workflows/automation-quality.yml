@@ -1,0 +1,41 @@
+name: Qualité du moteur d’autoconfiguration
+
+on:
+  pull_request:
+    paths:
+      - 'carokaz-autoconfig/**'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'carokaz-autoconfig/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-python:
+    name: Vérifier le moteur catalogue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Vérifier la syntaxe et les imports
+        run: |
+          python -m py_compile carokaz-autoconfig/carokaz_setup.py
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          ast.parse(Path('carokaz-autoconfig/carokaz_setup.py').read_text(encoding='utf-8'))
+          print('Moteur d’autoconfiguration valide.')
+          PY
+      - name: Vérifier les fichiers de configuration attendus
+        run: |
+          test -f carokaz-autoconfig/.env.example
+          test -f carokaz-autoconfig/requirements.txt
+          test -f .github/workflows/carokaz-seo.yml
