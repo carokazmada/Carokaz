@@ -143,3 +143,29 @@ jobs:
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
           retention-days: 30
+
+  quality:
+    name: Tests des scripts d’automatisation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: carokaz-autoconfig
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: carokaz-autoconfig/requirements.txt
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Exécuter les tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Vérifier la syntaxe Python
+        run: python -m py_compile carokaz_setup.py tests/test_carokaz_setup.py
