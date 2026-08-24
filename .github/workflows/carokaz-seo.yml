@@ -48,7 +48,7 @@ jobs:
           name: carokaz-public-seo-rapport-${{ github.run_number }}
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
 
   search-console-report:
     name: Rapport Search Console Madagascar
@@ -95,7 +95,7 @@ jobs:
           name: carokaz-search-console-rapport-${{ github.run_number }}
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
 
   shopify-seo:
     name: Audit et corrections Shopify
@@ -146,4 +146,4 @@ jobs:
           name: carokaz-shopify-seo-rapport-${{ github.run_number }}
           path: carokaz-autoconfig/rapports/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7
