@@ -17,16 +17,16 @@ cp .env.example .env      # puis remplir .env
 # 1. TOUJOURS commencer par une simulation
 python carokaz_setup.py --all --dry-run
 
-# 2. Si le rapport est correct, exécuter réellement
-python carokaz_setup.py --all
+# 2. Après revue humaine explicite du rapport, autoriser les écritures
+python carokaz_setup.py --all --apply
 
 # Tâches ciblées
-python carokaz_setup.py --only T1              # webhook Messenger seul
-python carokaz_setup.py --only T2              # audit lecture seule
-python carokaz_setup.py --only T3 --gti-price 90000000
+python carokaz_setup.py --only T1 --dry-run  # webhook Messenger simulé
+python carokaz_setup.py --only T2 --dry-run   # audit lecture seule
+python carokaz_setup.py --only T3 --gti-price 90000000 --dry-run
 python carokaz_setup.py --only T8 --dry-run     # contrôle SEO sans écriture
 python carokaz_setup.py --only T9,T10,T11 --dry-run # collections, articles et crawl public
-python carokaz_setup.py --only T12              # Search Console Madagascar
+python carokaz_setup.py --only T12 --dry-run   # Search Console Madagascar
 ```
 
 ## Tâches
@@ -47,3 +47,20 @@ python carokaz_setup.py --only T12              # Search Console Madagascar
 | T12 | Collecte Search Console sur les 28 derniers jours : requêtes, pages, pays, clics |
 
 Le rapport de chaque exécution est écrit dans `./rapports/rapport-<horodatage>.{json,md}`. Pour une exécution récurrente, utiliser le workflow GitHub Actions fourni dans `.github/workflows/carokaz-seo.yml` et renseigner le secret `SHOPIFY_ADMIN_TOKEN` avec les droits `read_products` et `write_products`. Le workflow exécute les contrôles publics à chaque run ; si le secret Shopify est absent, le job Shopify est marqué `DIFFÉRÉ` sans bloquer le crawl. Un job Search Console séparé exécute `T12` lorsque `GOOGLE_SERVICE_ACCOUNT_JSON` est présent ; sinon il crée également un rapport `DIFFÉRÉ`.
+
+## Renforcement de sécurité
+
+Le script fonctionne désormais en **lecture seule par défaut**. Utiliser `--dry-run` pour une simulation explicite. Les écritures externes exigent `--apply` et doivent être lancées manuellement après revue du rapport. La tâche T4, qui peut modifier tout le catalogue, est bloquée même avec `--apply` tant que `--allow-bulk` n’est pas ajouté explicitement.
+
+Exemples prudents :
+
+```bash
+python carokaz_setup.py --all --dry-run
+python carokaz_setup.py --only T2,T5,T8,T9,T10 --dry-run
+# Après revue humaine du rapport uniquement :
+python carokaz_setup.py --only T5,T8 --apply
+# T4 reste volontairement bloquée sans cette confirmation distincte :
+python carokaz_setup.py --only T4 --apply --allow-bulk
+```
+
+Les rapports sont créés avec les permissions locales `0600`. Le script valide le domaine Shopify, n’envoie pas le jeton dans l’URL, borne les délais réseau et réessaie les erreurs de transport avec une temporisation limitée.

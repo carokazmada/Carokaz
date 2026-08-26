@@ -32,6 +32,8 @@ Auteur : assistant opérationnel Carokaz Mada
 import argparse
 import json
 import os
+import re
+import stat
 import sys
 import time
 from html.parser import HTMLParser
@@ -57,6 +59,10 @@ except ImportError:
 SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "carokazmada-store.myshopify.com")
 API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2025-07")
 SITE_URL = os.getenv("SITE_URL", "https://carokazmada.com")
+if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.myshopify\.com", SHOP_DOMAIN):
+    raise SystemExit("SHOPIFY_SHOP doit être un domaine *.myshopify.com valide")
+if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-3])", API_VERSION):
+    raise SystemExit("SHOPIFY_API_VERSION doit respecter le format YYYY-MM")
 WHATSAPP = "0388424138"
 WHATSAPP_INTL = "261388424138"
 
@@ -116,8 +122,11 @@ def record(task, status, detail, data=None):
 # ─────────────────────────────────────────────────────────────
 class Shopify:
     def __init__(self, token, dry=False):
+        if not token or len(token) < 20:
+            raise ValueError("SHOPIFY_ADMIN_TOKEN absent ou manifestement invalide")
         self.url = f"https://{SHOP_DOMAIN}/admin/api/{API_VERSION}/graphql.json"
-        self.h = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
+        self.session = requests.Session()
+        self.session.headers.update({"X-Shopify-Access-Token": token, "Content-Type": "application/json", "User-Agent": "CarokazAutoConfig/2.0"})
         self.dry = dry
 
     def gql(self, query, variables=None, mutation=False):
@@ -125,17 +134,23 @@ class Shopify:
             log(f"[DRY-RUN] mutation ignorée : {query.strip().splitlines()[0][:60]}", "dim")
             return {"_dryrun": True}
         for attempt in range(6):
-            r = requests.post(self.url, headers=self.h,
-                              json={"query": query, "variables": variables or {}}, timeout=45)
-            if r.status_code == 429:
-                time.sleep(2 ** attempt); continue
-            r.raise_for_status()
-            j = r.json()
+            try:
+                r = self.session.post(self.url, json={"query": query, "variables": variables or {}}, timeout=(10, 45))
+                if r.status_code == 429:
+                    time.sleep(min(30, 2 ** attempt)); continue
+                r.raise_for_status()
+                j = r.json()
+            except (requests.RequestException, ValueError) as exc:
+                if attempt == 5:
+                    raise RuntimeError(f"Shopify indisponible après 6 tentatives: {type(exc).__name__}") from exc
+                time.sleep(min(30, 2 ** attempt)); continue
             errs = j.get("errors")
             if errs:
                 if any("THROTTLED" in str(e.get("extensions", {})) for e in errs):
-                    time.sleep(2 ** attempt); continue
+                    time.sleep(min(30, 2 ** attempt)); continue
                 raise RuntimeError(f"GraphQL: {json.dumps(errs, ensure_ascii=False)[:400]}")
+            if not isinstance(j.get("data"), dict):
+                raise RuntimeError("Shopify: réponse GraphQL sans champ data")
             return j["data"]
         raise RuntimeError("Shopify: throttling persistant après 6 tentatives")
 
@@ -885,11 +900,21 @@ def task_T12(cfg, dry):
 # ═════════════════════════════════════════════════════════════
 # RAPPORT
 # ═════════════════════════════════════════════════════════════
+def write_private(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, content.encode("utf-8"))
+    finally:
+        os.close(fd)
+    os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)
+
+
 def write_report():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d-%H%M")
-    (OUT_DIR / f"rapport-{stamp}.json").write_text(
-        json.dumps(RESULTS, indent=2, ensure_ascii=False), encoding="utf-8")
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    write_private(OUT_DIR / f"rapport-{stamp}.json",
+                  json.dumps(RESULTS, indent=2, ensure_ascii=False))
 
     icons = {"ok": "✅", "warn": "⚠️", "error": "❌", "skipped": "⏭️", "dryrun": "🧪"}
     lines = [f"# Carokaz Mada — Rapport d'auto-configuration",
@@ -899,7 +924,7 @@ def write_report():
         lines.append(f"| {r['task']} | {icons.get(r['status'],'•')} {r['status']} "
                      f"| {r['detail']} |")
     md = OUT_DIR / f"rapport-{stamp}.md"
-    md.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    write_private(md, "\n".join(lines) + "\n")
     print()
     log(f"Rapport : {md}", "ok")
 
@@ -910,11 +935,17 @@ def main():
     ap.add_argument("--all", action="store_true", help="exécuter toutes les tâches")
     ap.add_argument("--only", help="liste ex: T1,T4,T6")
     ap.add_argument("--dry-run", action="store_true", help="simulation, aucune écriture")
+    ap.add_argument("--apply", action="store_true", help="autoriser les écritures externes ; nécessite une validation explicite")
+    ap.add_argument("--allow-bulk", action="store_true", help="autoriser T4, écriture potentiellement massive du catalogue")
     ap.add_argument("--gti-price", help="prix de la Golf 7 GTI en MGA")
     a = ap.parse_args()
 
     cfg = dict(os.environ)
-    dry = a.dry_run
+    if a.apply and a.dry_run:
+        ap.error("--apply et --dry-run sont incompatibles")
+    if not a.dry_run and not a.apply:
+        ap.error("Mode lecture seule par défaut : ajouter --dry-run ou --apply pour autoriser une exécution")
+    dry = not a.apply
     selected = set(x.strip().upper() for x in a.only.split(",")) if a.only else None
     if not a.all and not selected:
         ap.error("Préciser --all ou --only T1,T2,...")
@@ -949,10 +980,14 @@ def main():
                 log(f"T3 : {e}", "err"); record("T3", "error", str(e))
             print()
         if want("T4") and products:
-            try:
-                task_T4(sp, products, dry)
-            except Exception as e:
-                log(f"T4 : {e}", "err"); record("T4", "error", str(e))
+            if not a.allow_bulk:
+                log("T4 bloquée : ajouter --allow-bulk après revue du périmètre", "warn")
+                record("T4", "blocked", "Écriture catalogue massive non autorisée par défaut")
+            else:
+                try:
+                    task_T4(sp, products, dry)
+                except Exception as e:
+                    log(f"T4 : {e}", "err"); record("T4", "error", str(e))
             print()
         if want("T5") and products:
             try:
