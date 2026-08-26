@@ -61,7 +61,7 @@ API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2025-07")
 SITE_URL = os.getenv("SITE_URL", "https://carokazmada.com")
 if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.myshopify\.com", SHOP_DOMAIN):
     raise SystemExit("SHOPIFY_SHOP doit être un domaine *.myshopify.com valide")
-if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-3])", API_VERSION):
+if not re.fullmatch(r"20\d{2}-(?:0[1-9]|1[0-2])", API_VERSION):
     raise SystemExit("SHOPIFY_API_VERSION doit respecter le format YYYY-MM")
 WHATSAPP = "0388424138"
 WHATSAPP_INTL = "261388424138"
