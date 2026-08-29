@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 env:
-  SHOPIFY_SHOP: carokazmada-store.myshopify.com
-  SHOPIFY_API_VERSION: "2025-07"
+  SHOPIFY_SHOP: edr2dn-dx.myshopify.com
+  SHOPIFY_API_VERSION: "2026-07"
   SITE_URL: https://carokazmada.com
   GSC_SITE_URL: sc-domain:carokazmada.com
   NO_COLOR: "1"
