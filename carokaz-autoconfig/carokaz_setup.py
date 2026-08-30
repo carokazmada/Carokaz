@@ -54,8 +54,8 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────
 # CONSTANTES PROJET (issues de la configuration Carokaz Mada)
 # ─────────────────────────────────────────────────────────────
-SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "carokazmada-store.myshopify.com")
-API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2025-07")
+SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "edr2dn-dx.myshopify.com")
+API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-07")
 SITE_URL = os.getenv("SITE_URL", "https://carokazmada.com")
 WHATSAPP = "0388424138"
 WHATSAPP_INTL = "261388424138"
