@@ -27,6 +27,7 @@ python carokaz_setup.py --only T3 --gti-price 90000000
 python carokaz_setup.py --only T8 --dry-run     # contrôle SEO sans écriture
 python carokaz_setup.py --only T9,T10,T11 --dry-run # collections, articles et crawl public
 python carokaz_setup.py --only T12              # Search Console Madagascar
+python carokaz_setup.py --only T13              # contrôle pickups en lecture seule
 ```
 
 ## Tâches
@@ -45,5 +46,6 @@ python carokaz_setup.py --only T12              # Search Console Madagascar
 | T10 | Contrôle et complétion idempotente des `global.title_tag` et `global.description_tag` des articles |
 | T11 | Crawl public : HTTP, title, description, H1, canonical, ALT, robots.txt et sitemap.xml |
 | T12 | Collecte Search Console sur les 28 derniers jours : requêtes, pages, pays, clics |
+| T13 | Détection des pickups, contrôle de qualité de fiche et liste de synchronisation Carokaz Mada / Carokaz Mada Pickups |
 
-Le rapport de chaque exécution est écrit dans `./rapports/rapport-<horodatage>.{json,md}`. Pour une exécution récurrente, utiliser le workflow GitHub Actions fourni dans `.github/workflows/carokaz-seo.yml` et renseigner le secret `SHOPIFY_ADMIN_TOKEN` avec les droits `read_products` et `write_products`. Le workflow exécute les contrôles publics à chaque run ; si le secret Shopify est absent, le job Shopify est marqué `DIFFÉRÉ` sans bloquer le crawl. Un job Search Console séparé exécute `T12` lorsque `GOOGLE_SERVICE_ACCOUNT_JSON` est présent ; sinon il crée également un rapport `DIFFÉRÉ`.
+Le rapport de chaque exécution est écrit dans `./rapports/rapport-<horodatage>.{json,md}`. La tâche T13 ne modifie aucune donnée : elle identifie les pickups à synchroniser dans Carokaz Mada Pickups et signale les éléments de qualité manquants. Pour une exécution récurrente, utiliser le workflow GitHub Actions fourni dans `.github/workflows/carokaz-seo.yml` et renseigner le secret `SHOPIFY_ADMIN_TOKEN` avec les droits `read_products` et `write_products`. Le workflow exécute les contrôles publics à chaque run ; si le secret Shopify est absent, le job Shopify est marqué `DIFFÉRÉ` sans bloquer le crawl. Un job Search Console séparé exécute `T12` lorsque `GOOGLE_SERVICE_ACCOUNT_JSON` est présent ; sinon il crée également un rapport `DIFFÉRÉ`.

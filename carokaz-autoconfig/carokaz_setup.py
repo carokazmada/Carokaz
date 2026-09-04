@@ -152,7 +152,7 @@ query($cursor: String) {
   products(first: 40, after: $cursor) {
     pageInfo { hasNextPage endCursor }
     nodes {
-      id title handle status
+      id title handle status tags
       seo { title description }
       media(first: 25) { nodes { ... on MediaImage { id alt } } }
       resourcePublications(first: 10) { nodes { publication { id } isPublished } }
@@ -502,6 +502,68 @@ def task_T5(sp, products, dry):
             log(f"Erreurs lot {i//25 + 1} : {errs}", "err")
     log("Metafields appliqués", "ok")
     return record("T5", "ok", f"{len(batch)} metafields écrits", {"produits": touched})
+
+
+# ═════════════════════════════════════════════════════════════
+# T13 — PICKUPS : CONTRÔLE DE SYNCHRONISATION ET QUALITÉ
+# ═════════════════════════════════════════════════════════════
+PICKUP_TERMS = (
+    "pickup", "pick-up", "pick up", "hilux", "ranger", "d-max", "l200",
+    "navara", "amarok", "bt-50", "t90",
+)
+
+
+def is_pickup_product(product):
+    haystack = " ".join([
+        product.get("title") or "",
+        product.get("handle") or "",
+        " ".join(product.get("tags") or []),
+    ]).lower()
+    return any(term in haystack for term in PICKUP_TERMS)
+
+
+def task_T13(products):
+    log("T13 — Pickups : synchronisation et qualité", "step")
+    pickups = [product for product in products if is_pickup_product(product)]
+    review, compliant = [], []
+    for product in pickups:
+        missing = []
+        seo = product.get("seo") or {}
+        media = (product.get("media") or {}).get("nodes", [])
+        if product.get("status") != "ACTIVE":
+            missing.append("statut non actif")
+        if not (seo.get("title") or "").strip():
+            missing.append("méta-titre")
+        if not (seo.get("description") or "").strip():
+            missing.append("méta-description")
+        if not media:
+            missing.append("photo")
+        elif any(not (item.get("alt") or "").strip() for item in media):
+            missing.append("ALT image")
+        if not (product.get("condition") or {}).get("value"):
+            missing.append("condition Google")
+        if not (product.get("gcat") or {}).get("value"):
+            missing.append("catégorie Google")
+
+        item = {
+            "title": product.get("title"),
+            "handle": product.get("handle"),
+            "status": product.get("status"),
+            "synchronisation_pickups": "à vérifier dans Carokaz Mada Pickups",
+        }
+        if missing:
+            item["anomalies"] = missing
+            review.append(item)
+        else:
+            compliant.append(item)
+
+    detail = f"{len(pickups)} pickup(s) identifié(s), {len(review)} à traiter"
+    log(detail, "warn" if review else "ok")
+    return record("T13", "warn" if review else "ok", detail, {
+        "pickups_conformes": compliant,
+        "pickups_a_traiter": review,
+        "regle": "Synchroniser uniquement les pickups applicables dans Carokaz Mada Pickups",
+    })
 
 
 # ═════════════════════════════════════════════════════════════
@@ -933,7 +995,7 @@ def main():
     if want("T1"):
         task_T1(cfg, dry); print()
 
-    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5", "T8", "T9", "T10"))
+    needs_shopify = any(want(t) for t in ("T2", "T3", "T4", "T5", "T8", "T9", "T10", "T13"))
     if needs_shopify and not sp:
         log("SHOPIFY_ADMIN_TOKEN absent — tâches Shopify ignorées", "warn")
     elif needs_shopify:
@@ -977,6 +1039,12 @@ def main():
                 task_T10(sp, dry)
             except Exception as e:
                 log(f"T10 : {e}", "err"); record("T10", "error", str(e))
+            print()
+        if want("T13") and products:
+            try:
+                task_T13(products)
+            except Exception as e:
+                log(f"T13 : {e}", "err"); record("T13", "error", str(e))
             print()
 
     if want("T6"):
