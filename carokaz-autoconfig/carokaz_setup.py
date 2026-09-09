@@ -888,8 +888,8 @@ def task_T12(cfg, dry):
 def write_report():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
-    (OUT_DIR / f"rapport-{stamp}.json").write_text(
-        json.dumps(RESULTS, indent=2, ensure_ascii=False), encoding="utf-8")
+    json_path = OUT_DIR / f"rapport-{stamp}.json"
+    json_path.write_text(json.dumps(RESULTS, indent=2, ensure_ascii=False), encoding="utf-8")
 
     icons = {"ok": "✅", "warn": "⚠️", "error": "❌", "skipped": "⏭️", "dryrun": "🧪"}
     lines = [f"# Carokaz Mada — Rapport d'auto-configuration",
@@ -898,6 +898,14 @@ def write_report():
     for r in RESULTS:
         lines.append(f"| {r['task']} | {icons.get(r['status'],'•')} {r['status']} "
                      f"| {r['detail']} |")
+    for result in RESULTS:
+        issues = (result.get("data") or {}).get("issues") or []
+        if issues:
+            lines.extend(["", f"## Anomalies {result['task']}", "",
+                          "| URL contrôlée | Problème |", "|---|---|"])
+            for issue in issues:
+                lines.append(f"| `{issue.get('path', '—')}` | {issue.get('issue', '—')} |")
+    lines.extend(["", f"Données détaillées : `{json_path.name}`."])
     md = OUT_DIR / f"rapport-{stamp}.md"
     md.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print()
