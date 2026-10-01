@@ -57,6 +57,7 @@ except ImportError:
 SHOP_DOMAIN = os.getenv("SHOPIFY_SHOP", "edr2dn-dx.myshopify.com")
 API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2026-07")
 SITE_URL = os.getenv("SITE_URL", "https://carokazmada.com")
+CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "contact@carokazmada.com")
 WHATSAPP = "0388424138"
 WHATSAPP_INTL = "261388424138"
 
@@ -361,7 +362,7 @@ GTI_DESC = """<p><strong>Volkswagen Golf 7 GTI</strong> — compacte sportive r�
 <li>Véhicule d'occasion contrôlé</li>
 <li>Livraison possible dans toute l'île</li>
 </ul>
-<p>Renseignements et disponibilité par WhatsApp au <strong>{wa}</strong>.</p>""".format(wa=WHATSAPP)
+<p>Renseignements et disponibilité par WhatsApp au <strong>{wa}</strong> ou par e-mail à <a href="mailto:{email}">{email}</a>.</p>""".format(wa=WHATSAPP, email=CONTACT_EMAIL)
 
 
 def task_T3(sp, price, dry):
