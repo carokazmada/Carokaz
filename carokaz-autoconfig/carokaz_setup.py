@@ -814,7 +814,22 @@ def task_T11(cfg, dry):
     robots = session.get(urljoin(base + "/", "robots.txt"), timeout=30)
     sitemap = session.get(urljoin(base + "/", "sitemap.xml"), timeout=30)
     sitemap_count = sitemap.text.count("<loc>") if sitemap.status_code == 200 else 0
-    payload = {"pages": rows, "issues": issues, "robots_status": robots.status_code, "sitemap_status": sitemap.status_code, "sitemap_loc_count": sitemap_count}
+    feed_urls = [x.strip() for x in cfg.get("SEO_AUDIT_FEED_URLS", "https://raw.githubusercontent.com/carokazmada/carokazmada.github.io/seo/merchant-feed/feeds/carokaz-merchant-mg.xml").split(",") if x.strip()]
+    feeds = []
+    for feed_url in feed_urls:
+        try:
+            feed_response = session.get(feed_url, timeout=30)
+            product_count = feed_response.text.count("<g:id>") if feed_response.status_code == 200 else 0
+            feed_row = {"url": feed_url, "status": feed_response.status_code, "product_count": product_count, "content_type": feed_response.headers.get("content-type", "")}
+            feeds.append(feed_row)
+            if feed_response.status_code != 200:
+                issues.append({"path": feed_url, "issue": f"flux HTTP {feed_response.status_code}"})
+            elif product_count == 0:
+                issues.append({"path": feed_url, "issue": "flux sans produit"})
+        except Exception as exc:
+            feeds.append({"url": feed_url, "status": 0, "product_count": 0, "error": repr(exc)})
+            issues.append({"path": feed_url, "issue": repr(exc)})
+    payload = {"pages": rows, "issues": issues, "robots_status": robots.status_code, "sitemap_status": sitemap.status_code, "sitemap_loc_count": sitemap_count, "merchant_feeds": feeds}
     if dry:
         log(f"[DRY-RUN] {len(rows)} page(s) contrôlée(s), {len(issues)} anomalie(s)", "dim")
         return record("T11", "dryrun", f"{len(rows)} pages, {len(issues)} anomalie(s)", payload)
