@@ -10,9 +10,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cloudflare-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Vérifier les fichiers sans déployer
+    name: Vérifier et empaqueter sans déployer
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -22,5 +26,25 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
-      - name: Contrôler le site provisoire
+      - name: Vérifier les fichiers statiques
         run: python3 cloudflare-site/scripts/verify.py
+      - name: Assembler un paquet de préparation
+        run: |
+          mkdir -p cloudflare-preview-output
+          cp cloudflare-site/index.html cloudflare-preview-output/
+          cp cloudflare-site/404.html cloudflare-preview-output/
+          cp cloudflare-site/style.css cloudflare-preview-output/
+          cp cloudflare-site/robots.txt cloudflare-preview-output/
+          cp cloudflare-site/_headers cloudflare-preview-output/
+          cp cloudflare-site/catalogue.json cloudflare-preview-output/
+          test -f cloudflare-preview-output/index.html
+          sha256sum cloudflare-preview-output/* > cloudflare-preview-output.sha256
+      - name: Archiver sans publier sur Cloudflare
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: carokaz-cloudflare-pages-preview
+          path: |
+            cloudflare-preview-output/
+            cloudflare-preview-output.sha256
+          if-no-files-found: error
+          retention-days: 7
