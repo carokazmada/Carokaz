@@ -1,3 +1,27 @@
+# Déploiement automatique Cloudflare — état du 13 octobre 2026
+
+Cette section remplace les anciennes consignes d'activation ci-dessous : l'utilisateur a demandé de résoudre et activer le déploiement automatique le 13 octobre 2026.
+
+## Configuration corrigée et testée
+- Projet existant : `carokazmada`, compte `07d0d1d1dba2f6b0fb777596eadb4037`.
+- Mode vérifié : Direct Upload, production `main`.
+- La liaison Git native a renvoyé l'erreur Cloudflare `8000011` concernant l'installation GitHub ; la source reste nulle.
+- Voie retenue : GitHub Actions + Wrangler CLI, sans nouvelle installation Git Cloudflare nécessaire.
+- Le workflow `cloudflare-preview-gated.yml` se déclenche sur les modifications pertinentes de `main` (production) ou de la branche de préparation (aperçu `carokaz-validation`).
+- L'ancien verrou `CAROKAZ_CLOUDFLARE_PREVIEW_AUTO` a été retiré suite à cette demande. L'identifiant de compte est configuré directement ; ce n'est pas un secret.
+- Tests statiques et syntaxe YAML réussis. Exécution GitHub 38312662355 : arrêt explicite avant déploiement car le secret `CLOUDFLARE_API_TOKEN` manque.
+- Aucun nouveau déploiement confirmé. Production observée : `c673a59e-5eb9-44b8-b305-c2e9258fce02`.
+- L'activation sur `main` nécessite l'intégration de cette PR selon les protections GitHub existantes.
+
+## Action d'authentification restante
+1. Créer un token Cloudflare avec la permission **Account → Cloudflare Pages → Edit**, limité au compte ci-dessus : https://dash.cloudflare.com/profile/api-tokens
+2. Enregistrer sa valeur directement dans GitHub, sous le nom **CLOUDFLARE_API_TOKEN** : https://github.com/carokazmada/Carokaz/settings/secrets/actions/new
+3. Relancer le job échoué, puis vérifier son URL et son statut Cloudflare. Ne jamais transmettre le jeton dans une conversation.
+
+Le connecteur GitHub disponible ne permet pas de créer des secrets Actions. Les connexions Cloudflare et GitHub à ChatGPT ne transfèrent pas de jeton entre services.
+
+## Historique (consignes d'activation remplacées par l'état ci-dessus)
+
 # Connexion GitHub → Cloudflare Pages sans ZIP manuel
 
 ## Projet existant
