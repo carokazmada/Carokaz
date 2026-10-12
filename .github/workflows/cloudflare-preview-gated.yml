@@ -1,4 +1,4 @@
-name: Carokaz Mada - Cloudflare preview gated
+name: Carokaz Mada - Tests avant previsualisation Git
 
 on:
   push:
@@ -12,77 +12,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: carokaz-cloudflare-preview
-  cancel-in-progress: false
+  group: carokaz-cloudflare-preview-checks
+  cancel-in-progress: true
 
 jobs:
-  preview:
-    name: Controle et preparation sans publication automatique
+  verify:
+    name: Verifier le site de preparation sans deployer avec Actions
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - name: Lire le depot
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Installer Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
-      - name: Tests locaux
+      - name: Verification statique
         run: python3 cloudflare-site/scripts/verify.py
-      - name: Contrôle Cloudflare (uniquement si activation explicite)
-        if: ${{ vars.CAROKAZ_CLOUDFLARE_PREVIEW_AUTO == 'true' }}
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Etat des connexions
         run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import sys
-          import urllib.request
-          account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
-          token = os.environ.get("CLOUDFLARE_API_TOKEN", "")
-          if not account or not token:
-              sys.exit("BLOCKED: Cloudflare secrets missing")
-          req = urllib.request.Request(
-              "https://api.cloudflare.com/client/v4/accounts/" + account + "/pages/projects/carokazmada",
-              headers={"Authorization": "Bearer " + token, "Accept": "application/json"}
-          )
-          try:
-              with urllib.request.urlopen(req, timeout=20) as response:
-                  payload = json.load(response)
-          except Exception as error:
-              sys.exit("BLOCKED: Cloudflare project inaccessible: " + type(error).__name__)
-          project = payload.get("result") or {}
-          if not payload.get("success") or project.get("name") != "carokazmada":
-              sys.exit("BLOCKED: wrong Cloudflare project")
-          prod_branch = project.get("production_branch")
-          if prod_branch != "main":
-              sys.exit("BLOCKED: production branch differs from verified main")
-          if project.get("source") is not None:
-              sys.exit("BLOCKED: Cloudflare project is no longer Direct Upload")
-          if project.get("subdomain") != "carokazmada.pages.dev":
-              sys.exit("BLOCKED: unexpected Cloudflare subdomain")
-          if sorted(project.get("domains") or []) != ["carokazmada.pages.dev"]:
-              sys.exit("BLOCKED: unexpected custom domain; do not deploy")
-          print("Cloudflare Direct Upload project verified; preview stays separate from production")
-          PY
-      - name: Préparer le dossier statique pour preview
-        if: ${{ vars.CAROKAZ_CLOUDFLARE_PREVIEW_AUTO == 'true' }}
-        run: |
-          mkdir -p cloudflare-output-preview
-          for file in index.html 404.html style.css robots.txt _headers catalogue.json; do
-            cp "cloudflare-site/$file" "cloudflare-output-preview/$file"
-          done
-          test -s cloudflare-output-preview/index.html
-      - name: Deployer uniquement une preview Cloudflare avec Wrangler CLI
-        if: ${{ vars.CAROKAZ_CLOUDFLARE_PREVIEW_AUTO == 'true' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --version
-          npm --version
-          npx --yes wrangler@4 pages deploy cloudflare-output-preview --project-name=carokazmada --branch=carokaz-validation
+          echo "Cloudflare Pages est connecte directement a GitHub pour les builds et previews."
+          echo "Ce job GitHub ne publie rien et n'utilise aucun jeton Cloudflare."
+          echo "Production main non modifiee."
