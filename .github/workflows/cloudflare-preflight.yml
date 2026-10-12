@@ -39,6 +39,16 @@ jobs:
           cp cloudflare-site/catalogue.json cloudflare-preview-output/
           test -f cloudflare-preview-output/index.html
           sha256sum cloudflare-preview-output/* > cloudflare-preview-output.sha256
+      - name: Audit de la version Cloudflare publique (lecture seule)
+        run: python3 cloudflare-site/scripts/live_audit.py
+      - name: Archiver le diagnostic public sans modifier Cloudflare
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: carokaz-cloudflare-audit-public
+          path: rapports-publics/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Archiver sans publier sur Cloudflare
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
