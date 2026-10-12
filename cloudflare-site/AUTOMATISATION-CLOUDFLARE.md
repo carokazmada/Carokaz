@@ -36,3 +36,9 @@ Documentation officielle Cloudflare :
 - https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/
 - https://developers.cloudflare.com/pages/get-started/direct-upload/
 - https://developers.cloudflare.com/pages/configuration/git-integration/
+
+## Correction de la politique GitHub Actions (12 octobre 2026)
+
+La politique du dépôt refuse l'action externe cloudflare/wrangler-action. Le workflow a été corrigé pour utiliser la **CLI officielle Wrangler** avec `npx --yes wrangler@4 pages deploy` dans une étape shell conditionnelle. Aucune ouverture de permissions GitHub n'est nécessaire. Le workflow GitHub a été testé avec succès après correction : les tests locaux ont fonctionné et toutes les étapes de déploiement Cloudflare ont été ignorées par le verrou de sécurité (activation absente). Aucun déploiement n'a été effectué.
+
+La validation finale d'un déploiement de prévisualisation nécessitera toujours une autorisation Cloudflare unique : ajouter `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_API_TOKEN` dans les secrets GitHub, puis `CAROKAZ_CLOUDFLARE_PREVIEW_AUTO=true` seulement si l'automatisation de prévisualisation est souhaitée. Ne jamais transmettre ces identifiants dans la conversation.
