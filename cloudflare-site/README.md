@@ -1,44 +1,47 @@
 # Carokaz Mada — Préparation Cloudflare Pages
 
-Site statique de **préparation** : les annonces ne sont pas encore importées.
+**Version de travail, non publiée.** Le fichier d'origine `Carokaz_Mada_Contact_V2.zip` n'était pas accessible : cette page a été préparée séparément, ce n'est pas sa copie exacte.
 
-## Garanties
+## État
+- Page vitrine responsive en français, lien d'appel **038 84 241 38**, page Facebook officielle : https://www.facebook.com/carokazmada/
+- Page d'erreur 404, catalogue volontairement vide (aucun prix ni véhicule inventé).
+- `robots.txt`, balises robots et `X-Robots-Tag` désactivent l'indexation **du site provisoire**.
+- Numéro secondaire, e-mail et adresse de showroom omis, faute de revalidation.
+- Aucune modification de DNS, Shopify, Hostinger, campagnes, messages ou paiement.
 
-- Aucun changement du DNS `carokazmada.com` ou `www.carokazmada.com`.
-- Aucun remplacement de Shopify ou de Hostinger.
-- Pas d'envoi de message, aucune publicité payante, aucune commande.
-- Catalogue vide : ne pas inventer de prix ni de véhicules.
-- Indexation bloquée jusqu'à la validation d'un catalogue réel (`robots.txt`, métadonnée `noindex`, en-tête `X-Robots-Tag`).
-- Numéro validé : **038 84 241 38**, lien d'appel `tel:+261388424138`.
-- Page Facebook validée : `https://www.facebook.com/carokazmada/`.
-- Numéro secondaire, adresse e-mail et adresse du showroom non affichés car non revalidés.
+## Validation automatique actuelle
 
-## Intégration automatique recommandée
+Le workflow `.github/workflows/cloudflare-preflight.yml` est déclenché par toute modification pertinente sur la PR de brouillon. Il :
+1. Vérifie les pages, les liens locaux, les boutons, le catalogue, les contrôles de base et `noindex`.
+2. Assemble un paquet de site statique dans `cloudflare-preview-output`.
+3. Archive ce paquet, avec sa somme de contrôle SHA-256, comme **artefact GitHub Actions** appelé `carokaz-cloudflare-pages-preview` (conservation 7 jours).
 
-### Nouveau projet avec intégration Git (préféré)
+**L'artefact n'est PAS un déploiement Cloudflare.** Il est accessible depuis l'exécution correspondante dans l'onglet Actions de GitHub, sans changer les DNS. Il peut être utilisé ultérieurement pour un projet Pages compatible. Les contrôles automatiques n'assurent pas à eux seuls que les couleurs, textes ou cadrages sont satisfaisants sur tous les mobiles.
 
-1. Dans Cloudflare, **Workers & Pages > Create > Pages > Connect to Git**.
-2. Choisir **GitHub** puis le dépôt `carokazmada/Carokaz`.
-3. Branche de production : **ne pas associer un domaine en production avant vérification**.
-4. Build command : **laisser vide** (site statique, sans build).
-5. Build output directory : `cloudflare-site` ; repository root `/`.
-6. Prévisualiser, vérifier visuellement et contrôler les liens.
-7. Après validation seulement, planifier la bascule DNS / domaine / SEO.
+Exécution locale :
 
-Attention : un projet **Direct Upload** existant ne peut pas être converti en projet Git. Le conserver intact et créer, si nécessaire, **un autre projet** Git-integrated, ou utiliser `wrangler pages deploy` avec des secrets Cloudflare (solution CI séparée).
-
-### Vérification locale
-
-```bash
+```sh
 python3 cloudflare-site/scripts/verify.py
 python3 -m http.server 8000 --directory cloudflare-site
 ```
 
-Ouvrir `http://localhost:8000` pour examiner la maquette. Lancer les tests avant toute proposition de déploiement.
+## Future mise à jour automatique sans ZIP
 
-## Future mise en ligne
+Solution recommandée : créer **un projet Cloudflare Pages lié à GitHub** dans un compte Cloudflare autorisé. Le projet peut recevoir automatiquement des mises à jour issues du dépôt, sans import de ZIP.
 
-- Importer uniquement les fiches produit validées (source catalogue autorisée, prix et disponibilité confirmés).
-- Corriger les contacts obsolètes ; ne pas ajouter de téléphone incertain.
-- Ajouter alors le canonical, sitemap, données structurées réelles et éventuelle indexation.
-- Préserver les URL Shopify importantes par des redirections 301 **uniquement lors d'une migration approuvée**.
+Précautions :
+- Le dossier `cloudflare-site` se trouve actuellement dans la branche `preparation/cloudflare-contact-automatisation-20261012`, **pas** dans `main`. Ne pas sélectionner `main` comme source du dossier tant que celui-ci n'y est pas présent.
+- Pour un projet indépendant de test, ne pas lui associer `carokazmada.com` ni `www.carokazmada.com`.
+- Réglages de build envisagés : *Framework preset* = None, commande de build = vide, dossier de sortie = `cloudflare-site`, racine = `/`.
+- Attention : relier GitHub à Cloudflare et sélectionner une branche peut rendre la page visible sur un sous-domaine `pages.dev` ; cela reste une publication à examiner séparément.
+- Un projet Cloudflare *Direct Upload* existant ne peut pas être simplement converti en projet Git ; laisser l'existant intact. Une autre solution est un déploiement via Wrangler dans un workflow distinct, avec secrets configurés dans GitHub, mais il ne doit pas être activé sans accès et validation spécifiques.
+- Ne jamais placer de jeton ou de code de vérification dans GitHub, dans les pages du site, ni dans les conversations.
+
+Documents Cloudflare officiels :
+- https://developers.cloudflare.com/pages/configuration/git-integration/
+- https://developers.cloudflare.com/pages/configuration/branch-build-controls/
+- https://developers.cloudflare.com/pages/configuration/build-configuration/
+
+## Migration complète éventuelle
+
+Vérifier le stock et les prix avant d'importer les fiches, tester les mobiles et les conversions, inventorier les URL Shopify et préparer les redirections 301. Ensuite seulement approuver le basculement du domaine et le retrait du blocage d'indexation sur la nouvelle production.
