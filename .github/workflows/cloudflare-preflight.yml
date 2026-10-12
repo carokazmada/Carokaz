@@ -39,6 +39,28 @@ jobs:
           cp cloudflare-site/catalogue.json cloudflare-preview-output/
           test -f cloudflare-preview-output/index.html
           sha256sum cloudflare-preview-output/* > cloudflare-preview-output.sha256
+      - name: Creer le ZIP directement importable dans Cloudflare
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root = Path("cloudflare-preview-output")
+          expected = {"index.html", "404.html", "style.css", "robots.txt", "_headers", "catalogue.json"}
+          assert {p.name for p in root.iterdir()} == expected
+          with ZipFile("Carokaz_Mada_Cloudflare.zip", "w", ZIP_DEFLATED) as archive:
+              for name in sorted(expected):
+                  archive.write(root / name, arcname=name)
+          with ZipFile("Carokaz_Mada_Cloudflare.zip") as archive:
+              assert set(archive.namelist()) == expected
+              assert archive.testzip() is None
+          PY
+      - name: Archiver le ZIP importable
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: carokaz-cloudflare-zip-importable
+          path: Carokaz_Mada_Cloudflare.zip
+          if-no-files-found: error
+          retention-days: 7
       - name: Audit de la version Cloudflare publique (lecture seule)
         run: python3 cloudflare-site/scripts/live_audit.py
       - name: Archiver le diagnostic public sans modifier Cloudflare
