@@ -57,9 +57,15 @@ jobs:
           if not payload.get("success") or project.get("name") != "carokazmada":
               sys.exit("BLOCKED: wrong Cloudflare project")
           prod_branch = project.get("production_branch")
-          if not prod_branch or prod_branch == "carokaz-validation":
-              sys.exit("BLOCKED: production branch cannot be safely distinguished from preview")
-          print("Cloudflare project validated; preview branch is separate from production")
+          if prod_branch != "main":
+              sys.exit("BLOCKED: production branch differs from verified main")
+          if project.get("source") is not None:
+              sys.exit("BLOCKED: Cloudflare project is no longer Direct Upload")
+          if project.get("subdomain") != "carokazmada.pages.dev":
+              sys.exit("BLOCKED: unexpected Cloudflare subdomain")
+          if sorted(project.get("domains") or []) != ["carokazmada.pages.dev"]:
+              sys.exit("BLOCKED: unexpected custom domain; do not deploy")
+          print("Cloudflare Direct Upload project verified; preview stays separate from production")
           PY
       - name: Préparer le dossier statique pour preview
         if: ${{ vars.CAROKAZ_CLOUDFLARE_PREVIEW_AUTO == 'true' }}
