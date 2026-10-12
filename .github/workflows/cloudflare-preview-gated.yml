@@ -69,10 +69,14 @@ jobs:
             cp "cloudflare-site/$file" "cloudflare-output-preview/$file"
           done
           test -s cloudflare-output-preview/index.html
-      - name: Deployer uniquement une preview Cloudflare
+      - name: Deployer uniquement une preview Cloudflare avec Wrangler CLI
         if: ${{ vars.CAROKAZ_CLOUDFLARE_PREVIEW_AUTO == 'true' }}
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy cloudflare-output-preview --project-name=carokazmada --branch=carokaz-validation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          npx --yes wrangler@4 pages deploy cloudflare-output-preview --project-name=carokazmada --branch=carokaz-validation
