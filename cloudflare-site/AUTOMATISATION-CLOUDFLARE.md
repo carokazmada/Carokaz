@@ -30,3 +30,15 @@ Ainsi, le refus API `upload-token` (erreur 10000) du jeton GitHub n'empêche pas
 `python3 cloudflare-site/scripts/verify.py`
 
 Les tests GitHub sont non destructifs ; les compilations Cloudflare sont indépendantes. Vérifier leur résultat dans **Cloudflare → Workers & Pages → carokazmada → Déploiements**.
+
+## Déclenchement des previews Git — correction du 13 octobre 2026
+
+Cloudflare Pages ignore intentionnellement une compilation si le message du commit commence par certains marqueurs, notamment `[CF-Pages-Skip]`, `[CI Skip]` ou `[Skip CI]`. Les commits préparatoires précédents utilisaient ce préfixe, d'où leur déploiement Cloudflare créé mais immédiatement ignoré (`queued/idle`).
+
+Désormais :
+- Utiliser un message de commit **sans marqueur de saut** pour demander une prévisualisation sur la branche de travail.
+- Les changements poussés sur `preparation/cloudflare-contact-automatisation-20261012` déclenchent une prévisualisation **publique** mais distincte de la production.
+- Conserver `main` inchangé : aucun commit ou merge vers `main` avant validation de la mise en production.
+- Vérifier le résultat effectif dans Cloudflare (état `success`) et la présence des pages avant d'annoncer que le déploiement a réussi.
+
+Référence officielle : https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/
