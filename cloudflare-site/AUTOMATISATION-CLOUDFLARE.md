@@ -42,3 +42,18 @@ Documentation officielle Cloudflare :
 La politique du dépôt refuse l'action externe cloudflare/wrangler-action. Le workflow a été corrigé pour utiliser la **CLI officielle Wrangler** avec `npx --yes wrangler@4 pages deploy` dans une étape shell conditionnelle. Aucune ouverture de permissions GitHub n'est nécessaire. Le workflow GitHub a été testé avec succès après correction : les tests locaux ont fonctionné et toutes les étapes de déploiement Cloudflare ont été ignorées par le verrou de sécurité (activation absente). Aucun déploiement n'a été effectué.
 
 La validation finale d'un déploiement de prévisualisation nécessitera toujours une autorisation Cloudflare unique : ajouter `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_API_TOKEN` dans les secrets GitHub, puis `CAROKAZ_CLOUDFLARE_PREVIEW_AUTO=true` seulement si l'automatisation de prévisualisation est souhaitée. Ne jamais transmettre ces identifiants dans la conversation.
+
+## État vérifié et choix d'intégration — 13 octobre 2026
+
+- Le connecteur Cloudflare ChatGPT est authentifié ; le projet existant s'appelle `carokazmada`, sa production est `main`, son sous-domaine est `carokazmada.pages.dev` et sa `source` est `null` (Direct Upload).
+- Le dépôt GitHub `carokazmada/Carokaz` est accessible. La PR n°12 reste un brouillon : ne pas fusionner simplement pour installer une intégration.
+- L'application officielle `Cloudflare Workers & Pages` peut être autorisée sur le seul dépôt `Carokaz`, mais **l'installation de cette application ne convertit pas le projet Direct Upload existant en projet Git**. Elle ne remplace pas les identifiants du workflow Wrangler.
+- La documentation officielle Cloudflare indique que les projets Direct Upload existants ne peuvent pas être convertis à une intégration Git native. Une route API de connexion de source existe dans la spécification, mais cela ne constitue pas une assurance de conversion prise en charge. **Ne pas appeler cet endpoint sur le projet de production**.
+- La méthode retenue pour automatiser le projet existant est toujours **GitHub Actions + CLI Wrangler**, avec la branche `carokaz-validation` exclusivement pour les aperçus.
+- **État du déploiement : non activé.** Les tests Github Actions fonctionnent, mais le jeton Cloudflare nécessaire à l'exécution GitHub doit être enregistré **directement comme secret dans GitHub par un administrateur autorisé**. La connexion du compte Cloudflare à ChatGPT ne transmet pas automatiquement ses identifiants à GitHub.
+- Ne pas publier, relier de domaine personnalisé, retirer `noindex`, ajouter des prix ou changer la branche de production sans validation distincte.
+
+Références :
+- https://developers.cloudflare.com/pages/get-started/c3/
+- https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/
+- https://github.com/apps/cloudflare-workers-and-pages
