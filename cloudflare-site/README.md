@@ -25,22 +25,28 @@ python3 cloudflare-site/scripts/verify.py
 python3 -m http.server 8000 --directory cloudflare-site
 ```
 
-## Future mise à jour automatique sans ZIP
+## Future mise à jour automatique sans ZIP : conserver le projet existant
 
-Solution recommandée : créer **un projet Cloudflare Pages lié à GitHub** dans un compte Cloudflare autorisé. Le projet peut recevoir automatiquement des mises à jour issues du dépôt, sans import de ZIP.
+Le projet Cloudflare Pages **carokazmada** a été vérifié avec le compte Cloudflare connecté. État observé le 13 octobre 2026 :
+- Sous-domaine existant : `https://carokazmada.pages.dev`
+- Mode : **Direct Upload** (`source = null`).
+- Branche de production : `main`.
+- Aucun domaine personnalisé lié.
+- Dernier déploiement connu : production du 12 octobre 2026 ; aucun déploiement GitHub automatique observé.
 
-Précautions :
-- Le dossier `cloudflare-site` se trouve actuellement dans la branche `preparation/cloudflare-contact-automatisation-20261012`, **pas** dans `main`. Ne pas sélectionner `main` comme source du dossier tant que celui-ci n'y est pas présent.
-- Pour un projet indépendant de test, ne pas lui associer `carokazmada.com` ni `www.carokazmada.com`.
-- Réglages de build envisagés : *Framework preset* = None, commande de build = vide, dossier de sortie = `cloudflare-site`, racine = `/`.
-- Attention : relier GitHub à Cloudflare et sélectionner une branche peut rendre la page visible sur un sous-domaine `pages.dev` ; cela reste une publication à examiner séparément.
-- Un projet Cloudflare *Direct Upload* existant ne peut pas être simplement converti en projet Git ; laisser l'existant intact. Une autre solution est un déploiement via Wrangler dans un workflow distinct, avec secrets configurés dans GitHub, mais il ne doit pas être activé sans accès et validation spécifiques.
-- Ne jamais placer de jeton ou de code de vérification dans GitHub, dans les pages du site, ni dans les conversations.
+**Choix retenu : GitHub Actions + Wrangler CLI, sans créer de nouveau projet Cloudflare.**
 
-Documents Cloudflare officiels :
-- https://developers.cloudflare.com/pages/configuration/git-integration/
-- https://developers.cloudflare.com/pages/configuration/branch-build-controls/
-- https://developers.cloudflare.com/pages/configuration/build-configuration/
+- La branche GitHub `preparation/cloudflare-contact-automatisation-20261012` contient les fichiers corrigés et les vérifications.
+- Le workflow `.github/workflows/cloudflare-preflight.yml` produit automatiquement un ZIP contrôlé, un rapport d'audit et une archive statique, sans publier.
+- Le workflow `.github/workflows/cloudflare-preview-gated.yml` permet une **prévisualisation uniquement** sur la branche Cloudflare `carokaz-validation`, mais son déploiement est désactivé par défaut.
+- Il faudra, lors d'une autorisation spécifique distincte, configurer les secrets `CLOUDFLARE_ACCOUNT_ID` et `CLOUDFLARE_API_TOKEN` directement dans GitHub, puis activer la variable de dépôt `CAROKAZ_CLOUDFLARE_PREVIEW_AUTO=true`. Ces actions sont **en attente** et ne doivent jamais être réalisées en copiant les valeurs dans un fichier public.
+- Installer l'application officielle Cloudflare Workers & Pages sur GitHub ne suffit pas, à lui seul, à convertir ce projet Direct Upload en intégration Git native ; cette conversion n'est pas prise en charge par Cloudflare.
+- La connexion du compte Cloudflare à ChatGPT n'installe pas de secret automatiquement dans GitHub Actions.
+- Toute modification de la production Cloudflare, du domaine `carokazmada.com`, des DNS ou de Shopify reste exclue de cette préparation.
+
+Voir `cloudflare-site/AUTOMATISATION-CLOUDFLARE.md` pour les détails d'activation.
+
+Documentation officielle : https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/
 
 ## Migration complète éventuelle
 
