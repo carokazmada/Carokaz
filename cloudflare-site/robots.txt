@@ -1,4 +1,3 @@
 User-agent: *
 Disallow: /
-
-# Site temporaire : indexation volontairement désactivée.
+# Maquette Cloudflare — indexation interdite.
