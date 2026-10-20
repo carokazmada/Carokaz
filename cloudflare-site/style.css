@@ -23,3 +23,14 @@ nav a{font-weight:500;font-size:15px}.search-shortcut{color:var(--ink)}
 /* Accents gris demandés, disposition conservée. */
 .services{background:#f4f5f6}.about{background:#e4e7e9}.contact{background:#343b42;color:#fff}.contact p:not(.eyebrow){color:#e2e5e7}.contact .eyebrow{color:#ffda4e}.contact .outline{color:#ffda4e;border-color:#ffda4e}
 .not-found{max-width:760px;margin:15vh auto;padding:32px}
+
+/* Garder les contacts dans la largeur disponible sur tablette. */
+@media (min-width:761px) and (max-width:1100px){
+  .contact{flex-wrap:wrap}
+  .contact>div{flex-basis:100%}
+}
+@media (max-width:380px){
+  .categories{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .category{min-width:0;padding-inline:7px;gap:5px;font-size:11px}
+  .category svg{width:20px;flex-shrink:0}
+}
