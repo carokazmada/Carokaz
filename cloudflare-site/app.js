@@ -19,7 +19,22 @@ $('#search-form').addEventListener('submit',e=>{e.preventDefault();render();$('#
 document.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{setCategory(b.dataset.category);render();$('#vehicules').scrollIntoView({behavior:'smooth'});}));
 function reset(){ $('#search-form').reset();updateModels();setCategory('');render();}
 $('#show-all').addEventListener('click',reset);$('#reset').addEventListener('click',reset);
-$('.menu-toggle').addEventListener('click',()=>{const open=$('#navigation').classList.toggle('open');$('.menu-toggle').setAttribute('aria-expanded',String(open));$('.menu-toggle').setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');});
-document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',()=>{$('#navigation').classList.remove('open');$('.menu-toggle').setAttribute('aria-expanded','false');document.querySelectorAll('nav a').forEach(b=>b.classList.toggle('active',b===a));}));
+const menuToggle = $('.menu-toggle');
+function setMenuOpen(open) {
+ $('#navigation').classList.toggle('open', open);
+ menuToggle.setAttribute('aria-expanded', String(open));
+ menuToggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+}
+menuToggle.addEventListener('click', () => setMenuOpen(menuToggle.getAttribute('aria-expanded') !== 'true'));
+document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', () => {
+ setMenuOpen(false);
+ document.querySelectorAll('nav a').forEach(b => b.classList.toggle('active', b === a));
+}));
+document.addEventListener('keydown', e => {
+ if (e.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
+  setMenuOpen(false);
+  menuToggle.focus();
+ }
+});
 $('.search-shortcut').addEventListener('click',()=>$('#brand').focus());
 updateModels();render();

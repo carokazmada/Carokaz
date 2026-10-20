@@ -1,47 +1,103 @@
 #!/usr/bin/env python3
+"""Validate and assemble ECM assets; non-main branches always stay noindex."""
 from pathlib import Path
 from html.parser import HTMLParser
-import json, shutil, os, re
+import base64
+import hashlib
+import json
+import os
+import shutil
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT.parent / "cloudflare-output"
-FILES = ("index.html","404.html","style.css","app.js","robots.txt","_headers","catalogue.json","sitemap.xml","assets/hero-audi.webp","assets/catalogue-maquette.webp")
+OUT = ROOT.parent / 'cloudflare-output'
+CANONICAL = 'https://carokazmada.com/'
+FILES = ('index.html', '404.html', 'style.css', 'app.js', 'robots.txt', '_headers',
+         'catalogue.json', 'sitemap.xml', 'assets/hero-audi.webp', 'assets/catalogue-maquette.webp')
+
+
 class Tags(HTMLParser):
     def __init__(self):
-        super().__init__(); self.tags=[]
+        super().__init__()
+        self.tags = []
+        self.jsonld = []
+        self.in_jsonld = False
+
     def handle_starttag(self, tag, attrs):
-        self.tags.append((tag,dict(attrs)))
+        attrs = dict(attrs)
+        self.tags.append((tag, attrs))
+        if tag == 'script':
+            self.in_jsonld = attrs.get('type') == 'application/ld+json'
+
+    def handle_data(self, data):
+        if self.in_jsonld:
+            self.jsonld.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == 'script':
+            self.in_jsonld = False
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
 def main():
     for name in FILES:
-        assert (ROOT/name).is_file(), name
-    html=(ROOT/"index.html").read_text()
-    js=(ROOT/"app.js").read_text()
-    css=(ROOT/"style.css").read_text()
-    p=Tags();p.feed(html)
-    assert sum(t=="h1" for t,a in p.tags)==1
-    assert 'tel:+261388424138' in html and '038 84 241 38' in html
-    assert 'https://www.facebook.com/carokazmada/' in html
-    assert 'const vehicles = [];' in js and 'demo-' not in js
-    assert json.loads((ROOT/"catalogue.json").read_text())["vehicules"]==[]
-    assert 'noindex' not in html and 'PRÉVISUALISATION' not in html
-    assert 'https://carokazmada.pages.dev/' in html
-    assert 'Disallow: /' not in (ROOT/"robots.txt").read_text()
-    assert 'X-Content-Type-Options: nosniff' in (ROOT/"_headers").read_text()
-    assert css.count('{')==css.count('}')
-    for tag,a in p.tags:
-        target=a.get("src","") or (a.get("href","") if tag=="link" else "")
-        if target.startswith("/"):
-            assert (ROOT/target.lstrip("/")).is_file(),target
-    for name in ("assets/hero-audi.webp","assets/catalogue-maquette.webp"):
-        b=(ROOT/name).read_bytes()
-        assert b[:4]==b"RIFF" and b[8:12]==b"WEBP"
-    if OUT.exists(): shutil.rmtree(OUT)
+        require((ROOT / name).is_file(), 'Missing asset: ' + name)
+    html = (ROOT / 'index.html').read_text()
+    headers = (ROOT / '_headers').read_text()
+    robots = (ROOT / 'robots.txt').read_text()
+    p = Tags()
+    p.feed(html)
+    require(sum(t == 'h1' for t, a in p.tags) == 1, 'Exactly one h1 required')
+    require('tel:+261388424138' in html and '038 84 241 38' in html, 'ECM phone mismatch')
+    require('https://www.facebook.com/carokazmada/' in html, 'ECM Facebook missing')
+    require([a.get('href') for t, a in p.tags if t == 'link' and a.get('rel') == 'canonical'] == [CANONICAL], 'Canonical mismatch')
+    require([a.get('content') for t, a in p.tags if t == 'meta' and a.get('name') == 'robots'] == ['index,follow'], 'Source must be indexable')
+    require('Disallow: /' not in robots and CANONICAL + 'sitemap.xml' in robots, 'Production robots mismatch')
+    locations = [e.text for e in ET.fromstring((ROOT / 'sitemap.xml').read_text()).iter('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]
+    require(locations == [CANONICAL], 'Sitemap must match published pages')
+    require('X-Content-Type-Options: nosniff' in headers, 'Security header missing')
+    require(p.jsonld, 'Structured data missing')
+    for raw in p.jsonld:
+        data = json.loads(raw)
+        require(data.get('@context') == 'https://schema.org', 'JSON-LD context mismatch')
+        digest = base64.b64encode(hashlib.sha256(raw.encode()).digest()).decode()
+        require("'sha256-" + digest + "'" in headers, 'JSON-LD CSP hash mismatch')
+    catalogue = json.loads((ROOT / 'catalogue.json').read_text())
+    require(catalogue.get('devise') == 'MGA' and isinstance(catalogue.get('vehicules'), list), 'Invalid catalogue')
+    # No stock is certified yet. Supporting real listings requires a separate reviewed change.
+    require(catalogue['vehicules'] == [] and catalogue.get('statut') == 'stock_non_confirme', 'Stock needs reviewed integration')
+    css = (ROOT / 'style.css').read_text()
+    require(css.count('{') == css.count('}'), 'Unbalanced CSS')
+    for tag, attrs in p.tags:
+        target = attrs.get('src', '') or (attrs.get('href', '') if tag == 'link' else '')
+        if target.startswith('/'):
+            require((ROOT / target.lstrip('/')).is_file(), 'Missing resource: ' + target)
+    for name in ('assets/hero-audi.webp', 'assets/catalogue-maquette.webp'):
+        content = (ROOT / name).read_bytes()
+        require(content[:4] == b'RIFF' and content[8:12] == b'WEBP', 'Invalid WebP: ' + name)
+    branch = os.environ.get('CF_PAGES_BRANCH', 'main')
+    if os.environ.get('CF_PAGES') and not os.environ.get('CF_PAGES_BRANCH'):
+        raise ValueError('Cloudflare branch identity missing; refusing ambiguous build')
+    preview = branch != 'main'
+    if OUT.exists():
+        shutil.rmtree(OUT)
     for name in FILES:
-        dest=OUT/name;dest.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copyfile(ROOT/name,dest)
-    if os.environ.get("CF_PAGES_BRANCH","main")!="main":
-        h=OUT/"index.html";h.write_text(h.read_text().replace('content="index,follow"','content="noindex,nofollow"'))
-        h=OUT/"_headers";h.write_text(h.read_text().replace("/*\n","/*\n  X-Robots-Tag: noindex, nofollow\n",1))
-        (OUT/"robots.txt").write_text("User-agent: *\nDisallow: /\n")
-    print("OK: contacts, catalogue confirmé vide, ressources locales, sécurité, SEO et paquet complet.")
-if __name__=="__main__": main()
+        dest = OUT / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, dest)
+    if preview:
+        target = OUT / 'index.html'
+        target.write_text(target.read_text().replace('content="index,follow"', 'content="noindex,nofollow"'))
+        target = OUT / '_headers'
+        target.write_text(target.read_text().replace('/*\n', '/*\n  X-Robots-Tag: noindex, nofollow\n', 1))
+        (OUT / 'robots.txt').write_text('User-agent: *\nDisallow: /\n')
+    print('OK: ECM assets, canonical, JSON-LD, CSP; mode=' + ('preview' if preview else 'production-candidate'))
+    print('Publication readiness NOT certified: current stock, domain mapping, redirects and analytics still require verification.')
+
+
+if __name__ == '__main__':
+    main()
