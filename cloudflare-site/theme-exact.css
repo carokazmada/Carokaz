@@ -1,3 +1,15 @@
-/* Affichage strictement fidèle aux pixels de la référence ECM.
-   L'image est conservée intacte ; aucune déformation ni retouche. */
-:root{color-scheme:light}*{box-sizing:border-box}html,body{padding:0;margin:0}body{background:#f5f6f9;color:#131829;font-family:Arial,Helvetica,sans-serif}.theme-reference{display:block;width:100%;max-width:1448px;height:auto;margin:0 auto;object-fit:contain}.preview-information{max-width:1448px;margin:0 auto;padding:24px 5%;background:#fff;font-size:15px;line-height:1.65}.preview-information p{margin:0 0 10px}.preview-information a{color:#7c4b00}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* ECM visual preview: preserve original image composition and every detail.
+   Subtle browser-side enhancement only; no text, image, or layout edits. */
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{padding:0;margin:0}
+body{background:#f5f6f9;color:#131829;font-family:Arial,Helvetica,sans-serif}
+.theme-reference{
+ display:block;width:100%;max-width:1448px;height:auto;margin:0 auto;
+ object-fit:contain;
+ filter:contrast(1.035) saturate(1.045) brightness(1.008);
+}
+.preview-information{max-width:1448px;margin:0 auto;padding:24px 5%;background:#fff;font-size:15px;line-height:1.65}
+.preview-information p{margin:0 0 10px}
+.preview-information a{color:#7c4b00}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
