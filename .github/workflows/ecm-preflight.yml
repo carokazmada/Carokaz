@@ -18,6 +18,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -m unittest discover -s cloudflare-site/tests -p 'test_*.py'
+      - run: python3 -m py_compile cloudflare-site/scripts/live_audit.py
       - run: node --check cloudflare-site/app.js
       - name: Candidat production
         run: python3 cloudflare-site/scripts/verify.py
