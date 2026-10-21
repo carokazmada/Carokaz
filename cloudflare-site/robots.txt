@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://carokazmada.com/sitemap.xml
