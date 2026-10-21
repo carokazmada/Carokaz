@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT.parent / 'cloudflare-output'
 CANONICAL = 'https://carokazmada.com/'
 FILES = ('index.html', '404.html', 'style.css', 'app.js', 'robots.txt', '_headers',
-         'catalogue.json', 'sitemap.xml', 'assets/hero-audi.webp', 'assets/catalogue-maquette.webp')
+         'catalogue.json', 'sitemap.xml', 'assets/hero-audi.webp', 'assets/catalogue-maquette.webp',
+         'assets/ECM_THEME_REFERENCE_ORIGINALE_2026-10-21.jpg', 'theme-exact.html', 'theme-exact.css')
 
 
 class Tags(HTMLParser):
@@ -95,6 +96,11 @@ def main():
         target = OUT / '_headers'
         target.write_text(target.read_text().replace('/*\n', '/*\n  X-Robots-Tag: noindex, nofollow\n', 1))
         (OUT / 'robots.txt').write_text('User-agent: *\nDisallow: /\n')
+    if branch == 'design/ecm-theme-exact-20261021':
+        # This is ONLY a noindex preview. Never replace a production build with the picture.
+        require(preview, 'Reference mockup must not be deployed as production')
+        (OUT / 'index.html').write_text((ROOT / 'theme-exact.html').read_text())
+        require('content="noindex,nofollow"' in (OUT / 'index.html').read_text(), 'Theme preview must be noindex')
     print('OK: ECM assets, canonical, JSON-LD, CSP; mode=' + ('preview' if preview else 'production-candidate'))
     print('Publication readiness NOT certified: current stock, domain mapping, redirects and analytics still require verification.')
 
