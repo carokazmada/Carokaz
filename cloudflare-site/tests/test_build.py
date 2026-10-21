@@ -60,6 +60,14 @@ class BuildTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'CSP hash'):
             self.build('main')
 
+    def test_local_without_branch_is_noindex(self):
+        # Local builds must never generate accidentally indexable output.
+        with patch.dict(os.environ, {}, clear=True):
+            verify.main()
+        self.assertIn('content="noindex,nofollow"', (self.out / 'index.html').read_text())
+        self.assertIn('X-Robots-Tag: noindex, nofollow', (self.out / '_headers').read_text().split('/404.html')[0])
+        self.assertIn('Disallow: /', (self.out / 'robots.txt').read_text())
+
     def test_ambiguous_cloudflare_branch_is_rejected(self):
         with patch.dict(os.environ, {'CF_PAGES': '1'}, clear=True):
             with self.assertRaisesRegex(ValueError, 'branch identity'):
