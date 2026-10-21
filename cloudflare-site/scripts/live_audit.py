@@ -68,7 +68,7 @@ def fetch(path):
 
 
 def audit():
-    results = {path: fetch(path) for path in ("/", "/robots.txt", "/404.html")}
+    results = {path: fetch(path) for path in ("/", "/robots.txt", "/__ecm_audit_nonexistent_404__")}
     facts = []
     home = results["/"]
     if "error" in home:
@@ -106,15 +106,17 @@ def audit():
                       "status": "ANOMALIE" if html_fallback or not is_robot_txt else "OK",
                       "detail": "HTTP " + str(robots["status"]) + ", type " + robots["content_type"] +
                       "; " + ("page HTML renvoyée" if html_fallback else "texte robots reconnu" if is_robot_txt else "texte robots non reconnu")})
-    missing = results["/404.html"]
+    missing = results["/__ecm_audit_nonexistent_404__"]
     if "error" in missing:
         facts.append({"id": "404", "status": "BLOQUÉ", "detail": missing["error"]})
     else:
         distinct_404 = ("Cette page est introuvable" in missing["body"]
                         or "Cette page n’existe pas sur ce site." in missing["body"]
                         or "ERREUR 404" in missing["body"])
-        facts.append({"id": "404", "status": "OK" if distinct_404 else "À VÉRIFIER",
-                      "detail": "Une page 404 personnalisée " + ("a été observée" if distinct_404 else "n'a pas été observée")})
+        correct_status = missing["status"] == 404
+        facts.append({"id": "404", "status": "OK" if distinct_404 and correct_status else "ANOMALIE",
+                      "detail": "HTTP " + str(missing["status"]) + "; page 404 personnalisée " +
+                      ("observée" if distinct_404 else "non observée")})
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "target": BASE,
             "scope": "lecture seule sur site public", "facts": facts,
             "http_status": {k: v.get("status") for k, v in results.items()}}
