@@ -1,30 +1,107 @@
-name: ECM — validation statique sans publication
+name: ECM - Builds et securite automatiques sans publication
+
 on:
-  pull_request:
-    paths: ['cloudflare-site/**', '.github/workflows/ecm-preflight.yml']
   push:
-    branches: ['fix/ecm-audit-20261021']
-    paths: ['cloudflare-site/**', '.github/workflows/ecm-preflight.yml']
+    branches:
+      - main
+      - fix/ecm-audit-20261021
+      - design/ecm-theme-exact-20261021
+      - design/ecm-theme-quality-20261021
+      - 'automation/ecm-*'
+    paths:
+      - 'cloudflare-site/**'
+      - '.github/workflows/ecm-preflight.yml'
+  pull_request:
+    paths:
+      - 'cloudflare-site/**'
+      - '.github/workflows/ecm-preflight.yml'
   workflow_dispatch:
+  # Le planning prend effet uniquement apres fusion du workflow sur la branche par defaut.
+  schedule:
+    - cron: '0 3 * * *'
+
 permissions:
   contents: read
+concurrency:
+  group: ecm-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    if: github.repository == 'carokazmada/Carokaz'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - name: Checkout ECM en lecture seule
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - run: python3 -m unittest discover -s cloudflare-site/tests -p 'test_*.py'
-      - run: python3 -m py_compile cloudflare-site/scripts/live_audit.py
-      - run: node --check cloudflare-site/app.js
-      - name: Candidat production
-        run: python3 cloudflare-site/scripts/verify.py
+      - name: Tests securite, separation ECM et qualite
+        run: python3 -m unittest discover -s cloudflare-site/tests -p 'test_*.py' -v
+      - name: Syntaxe Python et JavaScript
+        run: |
+          python3 -m py_compile cloudflare-site/scripts/verify.py cloudflare-site/scripts/live_audit.py
+          node --check cloudflare-site/app.js
+      - name: Build candidat de production sans publication
         env:
           CF_PAGES_BRANCH: main
-      - name: Prévisualisation protégée
-        run: python3 cloudflare-site/scripts/verify.py
+        run: |
+          python3 cloudflare-site/scripts/verify.py
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('cloudflare-output')
+          html = (root / 'index.html').read_text(encoding='utf-8')
+          robot = (root / 'robots.txt').read_text(encoding='utf-8')
+          headers = (root / '_headers').read_text(encoding='utf-8')
+          assert 'content="index,follow"' in html
+          assert 'Disallow: /' not in robot
+          assert 'X-Robots-Tag: noindex' not in headers.split('/404.html')[0]
+          assert (root / 'sitemap.xml').is_file()
+          PY
+      - name: Build preview avec blocage d'indexation
         env:
-          CF_PAGES_BRANCH: fix/ecm-audit-20261021
+          CF_PAGES_BRANCH: ecm-ci-preview
+        run: |
+          python3 cloudflare-site/scripts/verify.py
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('cloudflare-output')
+          html = (root / 'index.html').read_text(encoding='utf-8')
+          robot = (root / 'robots.txt').read_text(encoding='utf-8')
+          headers = (root / '_headers').read_text(encoding='utf-8')
+          assert 'content="noindex,nofollow"' in html
+          assert 'Disallow: /' in robot
+          assert 'X-Robots-Tag: noindex, nofollow' in headers
+          PY
+      - name: Controle du visuel de reference si present
+        env:
+          CF_PAGES_BRANCH: design/ecm-theme-exact-20261021
+        run: |
+          if test -f cloudflare-site/theme-exact.html; then
+            python3 cloudflare-site/scripts/verify.py
+            python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('cloudflare-output')
+          original = root / 'assets' / 'ECM_THEME_REFERENCE_ORIGINALE_2026-10-21.jpg'
+          expected = 'cd4260b291cb3696b7d1624427b209e5e3eb5e554f579e0cbb19072e3548a0e4'
+          assert original.is_file() and hashlib.sha256(original.read_bytes()).hexdigest() == expected
+          assert 'content="noindex,nofollow"' in (root / 'index.html').read_text(encoding='utf-8')
+          PY
+          else
+            echo "Reference theme non presente: controle conditionnel ignore."
+          fi
+      - name: Compte rendu ECM
+        if: always()
+        run: |
+          {
+            echo '### ECM - tests et builds automatiques'
+            echo '- Mode lecture seule : aucun secret, aucun deploiement en production.'
+            echo '- Controle des tests, scripts, SEO preview et du visuel original si present.'
+            echo '- Publier seulement apres inventaire authentifie, approbation independante et plan de retour arriere.'
+            echo '- Aucun melange avec les comptes et les ressources EBP.'
+          } >> "$GITHUB_STEP_SUMMARY"
