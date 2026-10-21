@@ -79,7 +79,7 @@ def main():
     for name in ('assets/hero-audi.webp', 'assets/catalogue-maquette.webp'):
         content = (ROOT / name).read_bytes()
         require(content[:4] == b'RIFF' and content[8:12] == b'WEBP', 'Invalid WebP: ' + name)
-    branch = os.environ.get('CF_PAGES_BRANCH', 'main')
+    branch = os.environ.get('CF_PAGES_BRANCH', 'local')
     if os.environ.get('CF_PAGES') and not os.environ.get('CF_PAGES_BRANCH'):
         raise ValueError('Cloudflare branch identity missing; refusing ambiguous build')
     preview = branch != 'main'
