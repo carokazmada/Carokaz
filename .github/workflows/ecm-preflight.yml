@@ -21,6 +21,10 @@ jobs:
       - run: python3 -m py_compile cloudflare-site/scripts/live_audit.py
       - name: État de préparation à la publication (informatif, sans déploiement)
         run: python3 cloudflare-site/scripts/publication_gate.py
+      - name: Contrôle HTTP de prévisualisation (GET uniquement)
+        run: python3 cloudflare-site/scripts/live_audit.py
+        env:
+          CAROKAZ_AUDIT_DIR: ${{ runner.temp }}/ecm-http-audit
       - run: node --check cloudflare-site/app.js
       - name: Candidat production
         run: python3 cloudflare-site/scripts/verify.py
