@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 import json
 import os
 
-BASE = "https://carokazmada.pages.dev"
+BASE = "https://fix-ecm-audit-20261021.carokazmada.pages.dev"
 USER_AGENT = "CarokazMada-SiteAudit/1.0 (read-only)"
 PHONE_LINK = "tel:+261388424138"
 FB_URL = "https://www.facebook.com/carokazmada/"
@@ -51,12 +51,18 @@ def fetch(path):
             raw = res.read(250_000)
             return {"status": res.status, "body": raw.decode("utf-8", errors="replace"),
                     "content_type": res.headers.get("Content-Type", ""),
-                    "x_robots_tag": res.headers.get("X-Robots-Tag", "")}
+                    "x_robots_tag": res.headers.get("X-Robots-Tag", ""),
+                    "csp": res.headers.get("Content-Security-Policy", ""),
+                    "nosniff": res.headers.get("X-Content-Type-Options", ""),
+                    "frame_options": res.headers.get("X-Frame-Options", "")}
     except HTTPError as exc:
         return {"status": exc.code,
                 "body": exc.read(20_000).decode("utf-8", errors="replace"),
                 "content_type": exc.headers.get("Content-Type", ""),
-                "x_robots_tag": exc.headers.get("X-Robots-Tag", "")}
+                "x_robots_tag": exc.headers.get("X-Robots-Tag", ""),
+                "csp": exc.headers.get("Content-Security-Policy", ""),
+                "nosniff": exc.headers.get("X-Content-Type-Options", ""),
+                "frame_options": exc.headers.get("X-Frame-Options", "")}
     except (URLError, OSError, TimeoutError) as exc:
         return {"error": type(exc).__name__ + ": " + str(exc)[:180]}
 
@@ -70,15 +76,25 @@ def audit():
     else:
         parser = Page()
         parser.feed(home["body"])
-        facts.append({"id": "homepage", "status": "CONFIRMÉ",
+        facts.append({"id": "homepage", "status": "OK" if home["status"] == 200 else "ANOMALIE",
                       "detail": "HTTP " + str(home["status"]) + "; titre: " + parser.title[:120]})
         facts.append({"id": "contact", "status": "OK" if PHONE_LINK in parser.hrefs else "ANOMALIE",
                       "detail": "Lien téléphone principal " + ("présent" if PHONE_LINK in parser.hrefs else "absent")})
         facts.append({"id": "facebook", "status": "OK" if FB_URL in parser.hrefs else "ANOMALIE",
                       "detail": "Lien Facebook officiel " + ("présent" if FB_URL in parser.hrefs else "absent")})
         has_noindex = any("noindex" in x for x in parser.robots) or "noindex" in home["x_robots_tag"].lower()
-        facts.append({"id": "noindex", "status": "OK" if has_noindex else "À VÉRIFIER",
+        facts.append({"id": "noindex", "status": "OK" if has_noindex else "ANOMALIE",
                       "detail": "Directive noindex " + ("observée" if has_noindex else "non observée dans les éléments contrôlés")})
+    if "error" not in home:
+        csp = home.get("csp", "")
+        checks = {
+            "csp": "default-src 'self'" in csp and "frame-ancestors 'none'" in csp,
+            "nosniff": home.get("nosniff", "").lower() == "nosniff",
+            "anti_clickjacking": home.get("frame_options", "").upper() == "DENY",
+        }
+        for check, passed in checks.items():
+            facts.append({"id": check, "status": "OK" if passed else "ANOMALIE",
+                          "detail": "En-tête HTTP " + ("présent" if passed else "absent ou incorrect")})
     robots = results["/robots.txt"]
     if "error" in robots:
         facts.append({"id": "robots_txt", "status": "BLOQUÉ", "detail": robots["error"]})
@@ -94,7 +110,9 @@ def audit():
     if "error" in missing:
         facts.append({"id": "404", "status": "BLOQUÉ", "detail": missing["error"]})
     else:
-        distinct_404 = "Cette page est introuvable" in missing["body"] or "ERREUR 404" in missing["body"]
+        distinct_404 = ("Cette page est introuvable" in missing["body"]
+                        or "Cette page n’existe pas sur ce site." in missing["body"]
+                        or "ERREUR 404" in missing["body"])
         facts.append({"id": "404", "status": "OK" if distinct_404 else "À VÉRIFIER",
                       "detail": "Une page 404 personnalisée " + ("a été observée" if distinct_404 else "n'a pas été observée")})
     return {"generated_at": datetime.now(timezone.utc).isoformat(), "target": BASE,
