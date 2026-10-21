@@ -45,3 +45,11 @@ N'utiliser que les offres gratuites : **0 Ar**, pas d'API payante ni de dépasse
 - **Important** : capture graphique, non une page marchande opérationnelle. Les quatre cartes et tarifs montrés font partie de l'image de référence, ne sont pas des annonces vérifiées. Ne pas reprendre les prix en base de données, ne pas rétablir le slogan de positionnement n°1 comme affirmation factuelle sans justificatif.
 - **À produire avant le site commercial final** : reproduction HTML/CSS accessible et fonctionnelle visuellement fidèle, catalogue et images authentifiés, approbation GitHub indépendante, validation SEO et plan de bascule.
 - **Sécurité** : comptes, médias, données et budget strictement ECM, zéro mélange EBP.
+
+
+## Variante de qualité visuelle publiée en aperçu (21/10/2026)
+
+- Image améliorée fournie par l'utilisateur : `assets/ECM_THEME_VISUEL_AMELIORE_2026-10-21.png` (format 1448 × 1086), conservée telle quelle dans GitHub et le Google Drive ECM ; la référence originale JPG reste accessible et inchangée.
+- La branche `design/ecm-theme-quality-20261021` remplace exclusivement la **présentation de prévisualisation** par ce PNG ; aucune modification du site marchand Shopify ni du domaine.
+- Prévisualisation `noindex,nofollow`, filtres simulés non interactifs ; prix et promesse de classement intégrés à l'image non vérifiés. Le texte de bas de page avertit le visiteur.
+- Branche `main` et déploiements de production Cloudflare **non modifiés**. Séparation complète avec EBP.
