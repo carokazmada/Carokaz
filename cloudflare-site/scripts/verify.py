@@ -14,7 +14,8 @@ OUT = ROOT.parent / 'cloudflare-output'
 CANONICAL = 'https://carokazmada.com/'
 FILES = ('index.html', '404.html', 'style.css', 'app.js', 'robots.txt', '_headers',
          'catalogue.json', 'sitemap.xml', 'assets/hero-audi.webp', 'assets/catalogue-maquette.webp',
-         'assets/ECM_THEME_REFERENCE_ORIGINALE_2026-10-21.jpg', 'theme-exact.html', 'theme-exact.css')
+         'assets/ECM_THEME_REFERENCE_ORIGINALE_2026-10-21.jpg',
+         'assets/ECM_THEME_VISUEL_AMELIORE_2026-10-21.png', 'theme-exact.html', 'theme-exact.css')
 
 
 class Tags(HTMLParser):
