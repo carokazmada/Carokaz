@@ -36,3 +36,12 @@ Dossier Drive ECM : https://drive.google.com/drive/folders/1VPs8PaVssGqdCL3s3wbE
 - [ ] Approbation de publication informée après contrôle des risques.
 
 N'utiliser que les offres gratuites : **0 Ar**, pas d'API payante ni de dépassement de quota. Mettre à jour les tâches vérifiées dans `carokazmada/carokaz-ecosystem-os` issue #14. Ce fichier n'effectue aucun déploiement.
+
+## Aperçu visuel inchangé (21 octobre 2026)
+
+- **Source propriétaire ECM** : `ECM_THEME_REFERENCE_ORIGINALE_2026-10-21.jpg` enregistrée dans le Google Drive Carokaz Mada. Une copie binaire inchangée se trouve dans `cloudflare-site/assets/`.
+- **Page visuelle** : `cloudflare-site/theme-exact.html`, avec `theme-exact.css`. L'image originale n'est ni redessinée, ni recadrée, ni recolorisée ; affichage à largeur proportionnelle.
+- **Prévisualisation** : branche `design/ecm-theme-exact-20261021`, page servie comme racine uniquement sur cette branche. Environnement prévisualisation **noindex,nofollow** ; aucun changement en production.
+- **Important** : capture graphique, non une page marchande opérationnelle. Les quatre cartes et tarifs montrés font partie de l'image de référence, ne sont pas des annonces vérifiées. Ne pas reprendre les prix en base de données, ne pas rétablir le slogan de positionnement n°1 comme affirmation factuelle sans justificatif.
+- **À produire avant le site commercial final** : reproduction HTML/CSS accessible et fonctionnelle visuellement fidèle, catalogue et images authentifiés, approbation GitHub indépendante, validation SEO et plan de bascule.
+- **Sécurité** : comptes, médias, données et budget strictement ECM, zéro mélange EBP.
