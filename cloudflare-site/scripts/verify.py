@@ -97,7 +97,7 @@ def main():
         target = OUT / '_headers'
         target.write_text(target.read_text().replace('/*\n', '/*\n  X-Robots-Tag: noindex, nofollow\n', 1))
         (OUT / 'robots.txt').write_text('User-agent: *\nDisallow: /\n')
-    if branch == 'design/ecm-theme-exact-20261021':
+    if branch in ('design/ecm-theme-exact-20261021', 'design/ecm-theme-quality-20261021'):
         # This is ONLY a noindex preview. Never replace a production build with the picture.
         require(preview, 'Reference mockup must not be deployed as production')
         (OUT / 'index.html').write_text((ROOT / 'theme-exact.html').read_text())
