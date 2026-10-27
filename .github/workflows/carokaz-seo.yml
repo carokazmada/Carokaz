@@ -18,7 +18,7 @@ env:
   SITE_URL: https://carokazmada.com
   GSC_SITE_URL: sc-domain:carokazmada.com
   NO_COLOR: "1"
-  SEO_AUDIT_PATHS: "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/blogs/actualites/fiara-amidy-madagascar-guide-achat-antananarivo,/pages/fiara-amidy-madagascar,/pages/a-propos,/pages/contact,/pages/faq"
+  SEO_AUDIT_PATHS: "/,/collections/vehicules-disponibles,/collections/fiara-vaovao,/collections/citadines,/collections/suv,/collections/4x4,/collections/pick-up,/blogs/actualites,/blogs/actualites"
 
 jobs:
   public-seo-crawl:
@@ -41,6 +41,9 @@ jobs:
 
       - name: Installer les dépendances
         run: pip install -r requirements.txt
+
+      - name: Validation syntax Python
+        run: python -m compileall .
 
       - name: Exécuter le crawl public
         run: python carokaz_setup.py --only T11 --dry-run
@@ -75,18 +78,24 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
+      - name: Validation syntax Python
+        run: python -m compileall .
+
       - name: Préparer les identifiants Search Console
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: |
           if [ -z "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
             mkdir -p rapports
-            printf '# Carokaz Mada — Diagnostic Search Console\\n\\nStatut : DIFFÉRÉ\\n\\nLe secret `GOOGLE_SERVICE_ACCOUNT_JSON` n’est pas configuré ; le crawl public reste actif.\\n' > "rapports/rapport-search-console-${GITHUB_RUN_ID}.md"
+            printf '# Carokaz Mada — Diagnostic Search Console\n\nStatut : DIFFÉRÉ\n\nLe secret `GOOGLE_SERVICE_ACCOUNT_JSON` n’est pas configuré ; le crawl public reste actif.\n' > "rapports/rapport-search-console-manuel.md"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
           else
             printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-service-account.json"
+            echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Collecter les performances Search Console
+        if: steps.search_console_preflight.outputs.configured == 'true'
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/google-service-account.json
         run: python carokaz_setup.py --only T12
@@ -121,6 +130,9 @@ jobs:
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
+      - name: Validation syntax Python
+        run: python -m compileall .
+
       - name: Vérifier le secret Shopify
         id: shopify_preflight
         env:
@@ -128,7 +140,7 @@ jobs:
         run: |
           if [ -z "$SHOPIFY_ADMIN_TOKEN" ]; then
             mkdir -p rapports
-            printf '# Carokaz Mada — Diagnostic Shopify\n\nStatut : DIFFÉRÉ\n\nLe secret `SHOPIFY_ADMIN_TOKEN` n’est pas configuré dans GitHub Actions ; l’hygiène Shopify sera reprise automatiquement dès son ajout.\n' > "rapports/rapport-preflight-${GITHUB_RUN_ID}.md"
+            printf '# Carokaz Mada — Diagnostic Shopify\n\nStatut : DIFFÉRÉ\n\nLe secret `SHOPIFY_ADMIN_TOKEN` n’est pas configuré dans GitHub Actions ; l’hygiène Shopify sera reprise au moment de la validation manuel.\n' > "rapports/rapport-shopify-manuel.md"
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Le secret SHOPIFY_ADMIN_TOKEN n'est pas configuré ; le job Shopify est différé."
             exit 0
