@@ -53,7 +53,7 @@ class PublicationGateTests(unittest.TestCase):
     def test_draft_can_be_machine_ready_without_production_approval(self):
         self.write_catalogue([{
             "id": "example", "marque": "Toyota", "modele": "Exemple",
-            "annee": 2020, "prix_mga": 123456789,
+            "annee": 2020, "categorie": "SUV", "prix_mga": 123456789,
             "disponibilite": "sur_demande", "photos": ["example.webp"]
         }])
         (self.root / "_redirects").write_text(

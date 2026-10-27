@@ -1,0 +1,14 @@
+{
+  "name": "Carokaz Mada — Véhicules d’occasion à Madagascar",
+  "short_name": "Carokaz Mada",
+  "description": "Véhicules d’occasion à Antananarivo et partout à Madagascar. Prix en Ariary, disponibilité à confirmer.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0a08",
+  "theme_color": "#ffda4e",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }
+  ]
+}

@@ -1,6 +1,199 @@
 {
-  "statut": "stock_non_confirme",
+  "statut": "selection_sur_demande",
   "devise": "MGA",
-  "vehicules": [],
-  "note": "Contactez Carokaz Mada pour confirmer le stock disponible."
+  "prix_affiche": false,
+  "source": "ECM_IMPORT_ARCHIVES/INVENTAIRE_19_BROUILLONS.csv (Carokaz PR #17, 2026-10-21)",
+  "note": "Modèles historiques Carokaz Mada transférés depuis les archives Shopify (19 brouillons). Aucun prix ni disponibilité certifiés : chaque demande est confirmée manuellement. Aucune donnée client, commande ou prix n'est reprise.",
+  "vehicules": [
+    {
+      "id": "CAROKAZ-8585878208673",
+      "marque": "Toyota",
+      "modele": "Land Cruiser HDJ100 VX Phase 2",
+      "annee": null,
+      "categorie": "4x4",
+      "designation": "TOYOTA LAND CRUISER HDJ100 VX PHASE 2 • 4.2 TURBO DIESEL • FULL OPTION",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8586064855201",
+      "marque": "Citroën",
+      "modele": "C5 Aircross",
+      "annee": 2020,
+      "categorie": "SUV",
+      "designation": "CITROËN C5 AIRCROSS 2020 • 1.5 BLUEHDI 130 CH • BOITE AUTOMATIQUE",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8595798491297",
+      "marque": "Toyota",
+      "modele": "Fortuner Legender",
+      "annee": 2025,
+      "categorie": "SUV",
+      "designation": "TOYOTA FORTUNER LEGENDER 2025 • 2.8 D-4D • 7 PLACES",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8595842007201",
+      "marque": "Volkswagen",
+      "modele": "Golf 7 GTI",
+      "annee": 2015,
+      "categorie": "Berline",
+      "designation": "VOLKSWAGEN GOLF 7 GTI 2015 • FULL OPTION • BOÎTE AUTOMATIQUE",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8650182328481",
+      "marque": "Toyota",
+      "modele": "Land Cruiser LC79",
+      "annee": 2022,
+      "categorie": "Pick-up",
+      "designation": "TOYOTA LAND CRUISER LC79 (2022) • DIESEL • PICKUP 4x4",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8650236231841",
+      "marque": "Toyota",
+      "modele": "Fortuner Premium",
+      "annee": 2025,
+      "categorie": "SUV",
+      "designation": "TOYOTA FORTUNER PREMIUM 2025 • 2.8 D-4D • 4x4 • 7 PLACES",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8650578722977",
+      "marque": "Hyundai",
+      "modele": "Santa Fe 3",
+      "annee": 2014,
+      "categorie": "SUV",
+      "designation": "HYUNDAI SANTA FE 3 (2014) • DIESEL 4WD • 7 PLACES",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8653169623201",
+      "marque": "Toyota",
+      "modele": "Land Cruiser LC200",
+      "annee": null,
+      "categorie": "4x4",
+      "designation": "Toyota Land Cruiser LC200 • V8 D-4D • Diesel (restylage à confirmer)",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8656110649505",
+      "marque": "Mazda",
+      "modele": "BT-50 4x4",
+      "annee": null,
+      "categorie": "Pick-up",
+      "designation": "MAZDA BT-50 4x4 • BOITE AUTOMATIQUE • BLANC",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8656110944417",
+      "marque": "Porsche",
+      "modele": "Cayenne",
+      "annee": 2013,
+      "categorie": "SUV",
+      "designation": "Porsche Cayenne 2013 • V6 diesel • Noire (génération à confirmer)",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8656112746657",
+      "marque": "Mitsubishi",
+      "modele": "L200 Sportero Triton",
+      "annee": 2024,
+      "categorie": "Pick-up",
+      "designation": "MITSUBISHI L200 SPORTERO TRITON 2024 • DOUBLE CABINE • NOIR",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8660680900769",
+      "marque": "Toyota",
+      "modele": "Land Cruiser LC200 VXR",
+      "annee": 2015,
+      "categorie": "4x4",
+      "designation": "TOYOTA LAND CRUISER LC200 VXR EXECUTIVE LOUNGE • 2015 • DIESEL",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8673749598369",
+      "marque": "Ford",
+      "modele": "Ranger T7 Wildtrak",
+      "annee": null,
+      "categorie": "Pick-up",
+      "designation": "FORD RANGER T7 WILDTRAK • 4x4 DOUBLE CABINE • DIESEL",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8686866301089",
+      "marque": "Toyota",
+      "modele": "Hilux Rocco",
+      "annee": 2022,
+      "categorie": "Pick-up",
+      "designation": "Toyota Hilux Rocco 2022 – Diesel 2.8L Automatique 4x4",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8689049403553",
+      "marque": "Toyota",
+      "modele": "Fortuner",
+      "annee": 2020,
+      "categorie": "SUV",
+      "designation": "Toyota Fortuner 2020 • 2.8 D-4D • 4WD • 7 places",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8690237341857",
+      "marque": "Volkswagen",
+      "modele": "Tiguan Phase 2",
+      "annee": 2014,
+      "categorie": "SUV",
+      "designation": "Volkswagen Tiguan Phase 2 2.0 TDI 4Motion 2014",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8692715946145",
+      "marque": "BMW",
+      "modele": "X3 II (F25) xDrive",
+      "annee": 2012,
+      "categorie": "SUV",
+      "designation": "BMW X3 II (F25) xDrive 2012 – Diesel – Boîte automatique 8 rapports",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-8696397267105",
+      "marque": "Ford",
+      "modele": "Ranger T9 Raptor",
+      "annee": 2025,
+      "categorie": "Pick-up",
+      "designation": "Ford Ranger T9 Raptor 2025 — Pick-up diesel automatique",
+      "disponibilite": "sur_demande",
+      "photos": []
+    },
+    {
+      "id": "CAROKAZ-PORSCHE-MACAN-S",
+      "marque": "Porsche",
+      "modele": "Macan S",
+      "annee": null,
+      "categorie": "SUV",
+      "designation": "Porsche Macan S",
+      "disponibilite": "sur_demande",
+      "photos": []
+    }
+  ]
 }

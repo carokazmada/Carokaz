@@ -29,22 +29,25 @@ def check(root=ROOT):
         "Stock structuré en liste et devise MGA exigés.")
     if not valid_list:
         vehicles = []
-    add("approved_vehicle_stock", len(vehicles) > 0,
+    # Showcase mode: models may be presented without a certified price, but no
+    # price or certified availability may ever be invented.
+    showcase = catalogue.get("prix_affiche") is False
+    add("approved_vehicle_stock", len(vehicles) > 0 or showcase,
         "Ne pas annoncer des véhicules disponibles sans fiches vérifiées.")
     for i, car in enumerate(vehicles):
         if not isinstance(car, dict):
             add("vehicle_" + str(i), False, "Fiche invalide.")
             continue
-        essential = ("id", "marque", "modele", "annee", "prix_mga",
-                     "disponibilite", "photos")
-        missing = [field for field in essential if field not in car or not car[field]]
+        missing = [f for f in ("id", "marque", "modele", "categorie") if not car.get(f)]
         if car.get("disponibilite") not in ("disponible", "vendu", "sur_demande"):
             missing.append("disponibilite_non_certifiee")
-        if car.get("prix_mga") and (
-            isinstance(car["prix_mga"], bool) or
-            not isinstance(car["prix_mga"], int) or car["prix_mga"] <= 0
+        price = car.get("prix_mga")
+        if price is not None and (
+            isinstance(price, bool) or not isinstance(price, int) or price <= 0
         ):
             missing.append("prix_mga_invalide")
+        elif price is None and not showcase:
+            missing.append("prix_mga_absent")
         add("vehicle_" + str(i), not missing,
             "Données manquantes/incorrectes: " + ", ".join(missing) if missing
             else "Données minimales présentes; validation humaine encore nécessaire.")

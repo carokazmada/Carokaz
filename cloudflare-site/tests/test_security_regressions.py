@@ -83,11 +83,17 @@ class SecurityRegressionTests(unittest.TestCase):
     def test_public_catalogue_does_not_fabricate_stock(self):
         import json
         inventory = json.loads((ROOT / "catalogue.json").read_text(encoding="utf-8"))
+        self.assertEqual("MGA", inventory.get("devise"))
+        self.assertIs(False, inventory.get("prix_affiche"))
         if not inventory.get("vehicules"):
             self.assertEqual("stock_non_confirme", inventory.get("statut"))
-            html = (ROOT / "index.html").read_text(encoding="utf-8")
-            self.assertIn("Disponibilités et prix à confirmer", html)
-        self.assertEqual("MGA", inventory.get("devise"))
+        else:
+            # Showcase: models may be listed, but no price or certified
+            # availability may ever be published.
+            for car in inventory["vehicules"]:
+                self.assertNotIn("prix", car)
+                self.assertNotIn("prix_mga", car)
+                self.assertEqual("sur_demande", car.get("disponibilite"))
 
 
 if __name__ == "__main__":

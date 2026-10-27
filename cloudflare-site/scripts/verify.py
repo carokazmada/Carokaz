@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT.parent / 'cloudflare-output'
 CANONICAL = 'https://carokazmada.com/'
 FILES = ('index.html', '404.html', 'style.css', 'app.js', 'robots.txt', '_headers',
-         'catalogue.json', 'sitemap.xml', 'assets/hero-audi.webp', 'assets/catalogue-maquette.webp')
+         '_redirects', 'favicon.svg', 'site.webmanifest', 'catalogue.json', 'sitemap.xml',
+         'assets/hero-audi.webp', 'assets/catalogue-maquette.webp', 'assets/og-image.png')
 
 
 class Tags(HTMLParser):
@@ -59,6 +60,12 @@ def main():
     require('Disallow: /' not in robots and CANONICAL + 'sitemap.xml' in robots, 'Production robots mismatch')
     locations = [e.text for e in ET.fromstring((ROOT / 'sitemap.xml').read_text()).iter('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]
     require(locations == [CANONICAL], 'Sitemap must match published pages')
+    redirect_lines = [l.split() for l in (ROOT / '_redirects').read_text().splitlines()
+                      if l.strip() and not l.lstrip().startswith('#')]
+    require(redirect_lines, 'Legacy redirects required')
+    for rule in redirect_lines:
+        require(len(rule) >= 3 and rule[0].startswith('/') and rule[1].startswith('/')
+                and rule[2] in ('301', '308'), 'Invalid redirect rule: ' + ' '.join(rule))
     require('X-Content-Type-Options: nosniff' in headers, 'Security header missing')
     require(p.jsonld, 'Structured data missing')
     for raw in p.jsonld:
@@ -68,8 +75,16 @@ def main():
         require("'sha256-" + digest + "'" in headers, 'JSON-LD CSP hash mismatch')
     catalogue = json.loads((ROOT / 'catalogue.json').read_text())
     require(catalogue.get('devise') == 'MGA' and isinstance(catalogue.get('vehicules'), list), 'Invalid catalogue')
-    # No stock is certified yet. Supporting real listings requires a separate reviewed change.
-    require(catalogue['vehicules'] == [] and catalogue.get('statut') == 'stock_non_confirme', 'Stock needs reviewed integration')
+    # Showcase only: models may be listed, but no price or availability may be
+    # certified without a separate reviewed change.
+    require(catalogue.get('prix_affiche') is False, 'Prices must not be published')
+    for car in catalogue['vehicules']:
+        require(isinstance(car, dict), 'Invalid vehicle entry')
+        require(car.get('disponibilite') == 'sur_demande', 'Availability must stay on request')
+        require('prix_mga' not in car and 'prix' not in car, 'Vehicle prices must not be published')
+        require(car.get('photos') == [], 'Photos need a reviewed, rights-cleared change')
+        require(car.get('id') and car.get('marque') and car.get('modele') and car.get('categorie'),
+                'Vehicle entry missing identity fields')
     css = (ROOT / 'style.css').read_text()
     require(css.count('{') == css.count('}'), 'Unbalanced CSS')
     for tag, attrs in p.tags:
@@ -79,6 +94,7 @@ def main():
     for name in ('assets/hero-audi.webp', 'assets/catalogue-maquette.webp'):
         content = (ROOT / name).read_bytes()
         require(content[:4] == b'RIFF' and content[8:12] == b'WEBP', 'Invalid WebP: ' + name)
+    require((ROOT / 'assets/og-image.png').read_bytes()[:8] == b'\x89PNG\r\n\x1a\n', 'Invalid OG image')
     branch = os.environ.get('CF_PAGES_BRANCH', 'local')
     if os.environ.get('CF_PAGES') and not os.environ.get('CF_PAGES_BRANCH'):
         raise ValueError('Cloudflare branch identity missing; refusing ambiguous build')

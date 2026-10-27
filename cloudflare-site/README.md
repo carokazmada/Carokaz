@@ -21,7 +21,14 @@ node --check cloudflare-site/app.js
 
 Le thème et les photos sont conservés. Les règles CSS pour tablette et petits écrans empêchent les boutons de dépasser la largeur disponible.
 
-Le site peut servir de vitrine institutionnelle avec une notice de disponibilité et des liens de contact. Les annonces automobiles doivent provenir de données validées avant leur ajout.
+Le site sert de vitrine institutionnelle et de sélection de modèles. Les données proviennent de `catalogue.json`, construit depuis les archives Shopify approuvées (19 fiches historiques, `ECM_IMPORT_ARCHIVES/`). Aucun prix ni disponibilité n'est certifié : chaque fiche affiche « Prix sur demande » et renvoie vers le contact Carokaz Mada. Aucune donnée client, commande ou prix n'est reprise des archives.
+
+### Sécurité et référencement intégrés
+
+- `_headers` : CSP à empreinte, HSTS, `nosniff`, `X-Frame-Options: DENY`, COOP/CORP, `Permissions-Policy`, cache immutable des assets.
+- `_redirects` : anciennes URL Shopify (`/products/*`, `/collections/*`, …) redirigées en 301 vers l'accueil.
+- `favicon.svg`, `site.webmanifest`, `assets/og-image.png` : icône, manifeste et image de partage.
+- `sitemap.xml`, `robots.txt`, canonical et JSON-LD (`Organization`, `WebSite`, `AutoDealer`).
 
 ## Contrôle avant publication
 
