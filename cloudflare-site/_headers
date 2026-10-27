@@ -1,0 +1,24 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self' 'sha256-EhgO1onKnuket0W1QMHKVCD52d7nSzzuqTazRp0IWMI='; connect-src 'self'; manifest-src 'self'
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/site.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=604800
+
+/favicon.svg
+  Content-Type: image/svg+xml
+  Cache-Control: public, max-age=604800
+
+/404.html
+  X-Robots-Tag: noindex, nofollow

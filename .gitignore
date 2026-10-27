@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 carokaz-autoconfig/rapports/
 gsc-service-account.json
+
+/cloudflare-output/
+__pycache__/
+*.pyc

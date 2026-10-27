@@ -1,0 +1,10 @@
+# Carokaz Mada — redirections des anciennes URL Shopify vers la vitrine.
+# Les produits historiques n'ont plus de page dédiée : ils renvoient vers
+# l'accueil où la sélection est présentée. Aucune cible externe.
+/products/* / 301
+/collections/* / 301
+/pages/* / 301
+/blogs/* / 301
+/cart / 301
+/cart/* / 301
+/account/* / 301
